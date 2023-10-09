@@ -9,3 +9,4 @@ maps/*
 plots/*
 venv/*
 venv_vdesk/*
+*__pycache__*
