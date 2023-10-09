@@ -1,3 +1,11 @@
 meetings/*
 data/*
 .idea/*
+.vscode/*
+__pycache__/*
+athena_1.7/*
+athena_run/*
+maps/*
+plots/*
+venv/*
+venv_vdesk/*
