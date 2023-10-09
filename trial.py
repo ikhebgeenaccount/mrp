@@ -4,6 +4,9 @@ import matplotlib
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+import treecorr
+
+import src.athena as athena
 
 
 def _generate_column_names():
@@ -28,9 +31,41 @@ def read_data_file(folder, file_name):
 
 	print(np.sqrt(data.shape[0]))
 
-	create_skymap(data, cone_number=1)
+	return data
 
-	peak_detection(data)
+
+def run_athena(data):
+	athena.convert_dataframe_to_athena_format(data, 'athena_run/gal_cat.csv')
+	athena.create_config_file()
+	athena.run()
+
+
+def run_treecorr(data, out_file='treecorr_2pcf.out'):
+	import src.treecorr_utils as treecorr_utils
+	cat = treecorr_utils.build_treecorr_catalog(data)
+	gg = treecorr.GGCorrelation(min_sep=.1, max_sep=100., bin_size=.1, sep_units='arcmin')
+
+	gg.process(cat)
+	gg.write(out_file)
+
+	tpcf_df = treecorr_utils.read_treecorr_result(out_file)
+
+	treecorr_utils.plot_correlation_function(tpcf_df)
+
+
+def plot_correlation_function(df, theta_col='theta', xi_m_col='xi_m', xi_p_col='xi_p', source='athena'):
+	fig, ax = plt.subplots()
+	ax.errorbar(df[theta_col], df[xi_p_col], label='$\\xi_+$')
+	ax.errorbar(df[theta_col], df[xi_m_col], label='$\\xi_-$')
+	# ax.hist(df_athena.xi_p, bins=df_athena.theta + (df_athena.theta[1] - df_athena.theta[0]) / 2, label='$\ksi_+$')
+	# ax.hist(df_athena.xi_m, bins=df_athena.theta + (df_athena.theta[1] - df_athena.theta[0]) / 2, label='$\ksi_-$')
+	ax.legend()
+
+	fig.savefig(os.path.join('plots', f'2pt_correlation_func_{source}.png'))
+
+	# create_skymap(data, cone_number=1)
+
+	# peak_detection(data)
 
 
 def peak_detection(data):
@@ -76,7 +111,48 @@ def create_gamma_kappa_hists(data):
 			axes[j].set_ylabel(col)
 
 
+def do_map_stuff():
+	from src.map import Map
+
+	filename = os.path.join('maps', 'SN0.27_Mosaic.KiDS1000GpAM.LOS74R1.SS3.982.Ekappa.npy')
+
+	map = Map(filename)
+	print(map.map.shape)
+	map.plot()
+
+	map.get_persistence()
+	persax = map.plot_persistence()
+
+	persax.plot(persax.get_ylim(), persax.get_ylim(), color='gray', linestyle='--')
+
+	print(map.get_betti_numbers())
+	# print(map.get_persistent_betti_numbers())
+
+	map.generate_heatmaps(resolution=1000)
+	persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmap_ranges[0][0]), *(map.heatmap_ranges[0][1])))
+
+	fig, ax = plt.subplots()
+	ax.imshow(map.heatmaps[0][:,::-1])#[::-1], origin='lower')
+
+	# Hist of values in map
+	fig, ax = plt.subplots()
+	ax.hist(map.map.flatten())
+
+
 if __name__ == '__main__':
-	read_data_file('data', 'KiDS1000_MocksCat_SLICS_HR_5_LOSALL_R1.dat')
+	data = read_data_file('data', 'KiDS1000_MocksCat_SLICS_HR_5_LOSALL_R1.dat')
+
+	create_skymap(data)
+
+	# run_athena(data)
+
+	# df_athena = athena.get_output()
+
+	# plot_correlation_function(df_athena)
+
+	# run_treecorr(data)
+
+	do_map_stuff()
+
 
 	plt.show()
