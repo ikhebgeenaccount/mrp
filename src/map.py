@@ -123,17 +123,30 @@ class Map:
 
 			# Scale parameter of the Gaussian
 			# Set to 1/25th of the range, similar value as Heydenreich+2022
+			pixel_scale = np.abs(birth_range[0] - birth_range[1])  # FIXME: pixels are not perfect squares, as death and birth ranges are different
+			# Determine the scale parameter (std, sigma) of the Gaussian kernel
 			scale_parameter = 1. / 25. * np.abs(birth_range[0] - birth_range[-1])
-			# TODO: how to decide on Gaussian parameters?
-			scale_parameter = 10
-			window_size = 100
 
-			gaussian_kernel1d = gaussian(window_size, std=scale_parameter)
+			gaussian_size_in_sigma = 3
+			sigma_in_pixel = scale_parameter / pixel_scale
+			gaussian_size_in_pixel = sigma_in_pixel * 2 * gaussian_size_in_sigma  # Two times because symmetric Gaussian with both sides
+
+			gaussian_kernel1d = gaussian(np.round(gaussian_size_in_pixel), std=sigma_in_pixel)
 			gaussian_kernel = np.outer(gaussian_kernel1d, gaussian_kernel1d)
 
 			heatmap = convolve2d(heatmap, gaussian_kernel, mode='same')
 		
 			self.heatmaps.append(Heatmap(heatmap, (birth_range[0], birth_range[-1]), (death_range[0], death_range[-1])))
+
+		# Diagnostic plots
+		# import os
+		# fig, ax = plt.subplots()
+		# ax.plot(gaussian_kernel1d)
+		# fig.savefig(os.path.join('plots', 'gaussian_kernel_1d.png'))
+		
+		# fig, ax = plt.subplots()
+		# ax.imshow(gaussian_kernel)
+		# fig.savefig(os.path.join('plots', 'gaussian_kernel_2d.png'))
 
 	
 class Heatmap:
