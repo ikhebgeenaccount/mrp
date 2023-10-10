@@ -122,6 +122,8 @@ def do_map_stuff():
 
 	map.get_persistence()
 	persax = map.plot_persistence()
+	import sys
+	sys.exit()
 
 	persax.plot(persax.get_ylim(), persax.get_ylim(), color='gray', linestyle='--')
 
@@ -129,10 +131,13 @@ def do_map_stuff():
 	# print(map.get_persistent_betti_numbers())
 
 	map.generate_heatmaps(resolution=1000)
-	persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmap_ranges[0][0]), *(map.heatmap_ranges[0][1])))
+	persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmaps[0].birth_range), *(map.heatmaps[0].death_range)))
 
 	fig, ax = plt.subplots()
 	ax.imshow(map.heatmaps[0][:,::-1])#[::-1], origin='lower')
+
+	fig, ax = plt.subplots()
+	ax.imshow(map.heatmaps[1][:,::-1])#[::-1], origin='lower')
 
 	# Hist of values in map
 	fig, ax = plt.subplots()
