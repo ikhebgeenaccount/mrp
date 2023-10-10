@@ -8,6 +8,9 @@ class Map:
 		self.filename = filename
 		self._load()
 
+	def __getitem__(self, item):
+		return self.map[item]
+
 	def _load(self):
 		self.map = np.load(self.filename)
 
@@ -61,6 +64,10 @@ class Map:
 		return self.persistent_betti_numbers
 	
 	def plot_persistence(self):
+		# TODO: matplotlib not found when gudhi tries to plot
+		# ax = gudhi.plot_persistence_diagram(self.get_persistence())
+		# return ax
+		
 		# Scatter each dimension separately
 		fig, ax = plt.subplots()
 		ax.set_xlabel('Birth')
@@ -69,7 +76,7 @@ class Map:
 			# Turn into np array for easy slicing
 			pairs = self.dimension_pairs[dimension]
 
-			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'{dimension}')
+			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'{dimension}', s=3)
 		
 		ax.legend()
 
@@ -82,9 +89,9 @@ class Map:
 		:param resolution: The number of pixels in one axis, the resulting heatmap is always a square of size resolution x resolution
 		"""
 		from scipy.signal import convolve2d
+		from scipy.signal.windows import gaussian
 
 		self.heatmaps = []
-		self.heatmap_ranges = []
 
 		# convolve2d takes two arrays as input
 		# We need to generate a 2D array with 1s in the spot of each (birth, death) scatter point
@@ -114,15 +121,27 @@ class Map:
 
 				heatmap[death_coord, birth_coord] = 1.
 
-			# TODO: convolve2d
-
 			# Scale parameter of the Gaussian
 			# Set to 1/25th of the range, similar value as Heydenreich+2022
 			scale_parameter = 1. / 25. * np.abs(birth_range[0] - birth_range[-1])
+			# TODO: how to decide on Gaussian parameters?
+			scale_parameter = 10
+			window_size = 100
 
-			gaussian_kernel = None
+			gaussian_kernel1d = gaussian(window_size, std=scale_parameter)
+			gaussian_kernel = np.outer(gaussian_kernel1d, gaussian_kernel1d)
 
-			heatmap = convolve2d(heatmap, gaussian_kernel)
+			heatmap = convolve2d(heatmap, gaussian_kernel, mode='same')
 		
-			self.heatmaps.append(heatmap)
-			self.heatmap_ranges.append([(birth_range[0], birth_range[-1]), (death_range[0], death_range[-1])])
+			self.heatmaps.append(Heatmap(heatmap, (birth_range[0], birth_range[-1]), (death_range[0], death_range[-1])))
+
+	
+class Heatmap:
+
+	def __init__(self, heatmap, birth_range, death_range):
+		self.heatmap = heatmap
+		self.birth_range = birth_range
+		self.death_range = death_range
+
+	def __getitem__(self, item):
+		return self.heatmap[item]
