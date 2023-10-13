@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import treecorr
 
-import src.athena as athena
+import analysis.athena as athena
 
 
 def _generate_column_names():
@@ -41,7 +41,7 @@ def run_athena(data):
 
 
 def run_treecorr(data, out_file='treecorr_2pcf.out'):
-	import src.treecorr_utils as treecorr_utils
+	import analysis.treecorr_utils as treecorr_utils
 	cat = treecorr_utils.build_treecorr_catalog(data)
 	gg = treecorr.GGCorrelation(min_sep=.1, max_sep=100., bin_size=.1, sep_units='arcmin')
 
@@ -98,6 +98,8 @@ def create_skymap(data, cone_number=1):
 
 	fig.colorbar(cax)
 
+	fig.savefig('plots/map.png')
+
 
 def create_gamma_kappa_hists(data):
 	for i in range(1, 11):
@@ -111,37 +113,56 @@ def create_gamma_kappa_hists(data):
 			axes[j].set_ylabel(col)
 
 
+def all_maps():
+	from analysis.map import Map
+	from plotting.persistence_diagram import PersistenceDiagram
+	import glob
+
+	for dir in glob.glob('maps/*'):
+		if os.path.isdir(dir):
+			curr_cosm_maps = []
+			for i, map_path in enumerate(glob.glob(f'{dir}/*.npy')):
+				print('Analzying map', i, map_path)
+				map = Map(map_path)
+				map.get_persistence()
+				curr_cosm_maps.append(map)
+			
+			pd = PersistenceDiagram(curr_cosm_maps)
+			pd.save(os.path.join('plots', 'persistence_diagrams'))
+
+
 def do_map_stuff():
-	from src.map import Map
+	from analysis.map import Map
 
 	filename = os.path.join('maps', 'SN0.27_Mosaic.KiDS1000GpAM.LOS74R1.SS3.982.Ekappa.npy')
 
 	map = Map(filename)
 	print(map.map.shape)
 	map.plot()
+	plt.savefig('plots/mapp.png')
 
 	map.get_persistence()
-	persax = map.plot_persistence()
-	import sys
-	sys.exit()
-
-	persax.plot(persax.get_ylim(), persax.get_ylim(), color='gray', linestyle='--')
 
 	print(map.get_betti_numbers())
-	# print(map.get_persistent_betti_numbers())
+	print(map.get_persistent_betti_numbers(map.map.min(), map.map.max()))
 
-	map.generate_heatmaps(resolution=1000)
-	persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmaps[0].birth_range), *(map.heatmaps[0].death_range)))
+	# map.generate_heatmaps(resolution=1000)
 
-	fig, ax = plt.subplots()
-	ax.imshow(map.heatmaps[0][:,::-1])#[::-1], origin='lower')
+	persax = map.plot_persistence()
 
-	fig, ax = plt.subplots()
-	ax.imshow(map.heatmaps[1][:,::-1])#[::-1], origin='lower')
+	# persax.plot(persax.get_ylim(), persax.get_ylim(), color='gray', linestyle='--')
+	# persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmaps[0].birth_range), *(map.heatmaps[0].death_range)))
+	# plt.savefig(os.path.join('plots', 'heatmap_proper_scaling.png'))
 
-	# Hist of values in map
-	fig, ax = plt.subplots()
-	ax.hist(map.map.flatten())
+	# fig, ax = plt.subplots()
+	# ax.imshow(map.heatmaps[0][:,::-1])#[::-1], origin='lower')
+
+	# fig, ax = plt.subplots()
+	# ax.imshow(map.heatmaps[1][:,::-1])#[::-1], origin='lower')
+
+	# # Hist of values in map
+	# fig, ax = plt.subplots()
+	# ax.hist(map.map.flatten())
 
 
 if __name__ == '__main__':
@@ -157,7 +178,7 @@ if __name__ == '__main__':
 
 	# run_treecorr(data)
 
-	do_map_stuff()
+	all_maps()
 
 
 	plt.show()
