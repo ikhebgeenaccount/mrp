@@ -11,6 +11,8 @@ class PersistenceDiagram:
 	def __init__(self, maps: List[Map]):
 		self.dimension_pairs = maps[0].dimension_pairs.copy()
 
+		self.maps = maps
+
 		for map in maps[1:]:
 			for dimension in self.dimension_pairs:
 				self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
@@ -38,3 +40,13 @@ class PersistenceDiagram:
 
 	def save(self, path):
 		self.fig.savefig(os.path.join(path, f'{self.cosmology}.png'))
+
+	def add_average_lines(self):
+		# Average death and birth
+		self.ax.axhline(y=np.average(self.dimension_pairs['all'][:, 1][np.isfinite(self.dimension_pairs['all'][:, 1])]), linestyle='--', color='black')
+		self.ax.axvline(x=np.average(self.dimension_pairs['all'][:, 0][np.isfinite(self.dimension_pairs['all'][:, 0])]), linestyle='--', color='black')
+		
+		# Average of map
+		all_maps_avg = np.average([np.average(map.map) for map in self.maps])
+		self.ax.axvline(x=all_maps_avg, linestyle='--', color='grey')
+		self.ax.axhline(y=all_maps_avg, linestyle='--', color='grey')

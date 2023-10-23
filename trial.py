@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 import treecorr
 
 import analysis.athena as athena
+from analysis.map import Map
+from plotting.persistence_diagram import PersistenceDiagram
+import glob
 
 
 def _generate_column_names():
@@ -114,9 +117,6 @@ def create_gamma_kappa_hists(data):
 
 
 def all_maps():
-	from analysis.map import Map
-	from plotting.persistence_diagram import PersistenceDiagram
-	import glob
 
 	for dir in glob.glob('maps/*'):
 		if os.path.isdir(dir):
@@ -125,15 +125,16 @@ def all_maps():
 				print('Analzying map', i, map_path)
 				map = Map(map_path)
 				map.get_persistence()
+				map.generate_heatmaps(resolution=100)
 				curr_cosm_maps.append(map)
 			
 			pd = PersistenceDiagram(curr_cosm_maps)
+			# pd.add_average_lines()
 			pd.save(os.path.join('plots', 'persistence_diagrams'))
+			plt.close(pd.fig)
 
 
 def do_map_stuff():
-	from analysis.map import Map
-
 	filename = os.path.join('maps', 'SN0.27_Mosaic.KiDS1000GpAM.LOS74R1.SS3.982.Ekappa.npy')
 
 	map = Map(filename)
@@ -141,14 +142,21 @@ def do_map_stuff():
 	map.plot()
 	plt.savefig('plots/mapp.png')
 
-	map.get_persistence()
-
 	print(map.get_betti_numbers())
-	print(map.get_persistent_betti_numbers(map.map.min(), map.map.max()))
+
+	for i, t in enumerate(np.linspace(map.map.min(), map.map.max(), 5)):
+		if i == 0:
+			prev_t = t
+			continue
+
+		print(f't\',t = {prev_t}, {t}')
+		print(map.get_persistent_betti_numbers(prev_t, t))
+
+		prev_t = t
 
 	# map.generate_heatmaps(resolution=1000)
 
-	persax = map.plot_persistence()
+	persax = PersistenceDiagram([map]).ax
 
 	# persax.plot(persax.get_ylim(), persax.get_ylim(), color='gray', linestyle='--')
 	# persax.imshow(map.heatmaps[0][:,::-1], extent=(*(map.heatmaps[0].birth_range), *(map.heatmaps[0].death_range)))

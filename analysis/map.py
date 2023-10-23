@@ -6,6 +6,28 @@ import numpy as np
 
 from utils import file_system
 
+def to_perseus_format(map, mask=None):
+	# Ref: https://gudhi.inria.fr/python/latest/fileformats.html#file-formats
+
+	output = '2\n'  # 2 dimensions
+	# Add shape lines
+	# First line is x length
+	output += str(map.shape[1]) + '\n'
+	# Second line is y length
+	output += str(map.shape[0]) + '\n'
+
+	masked_map = np.ma.array(map, mask=mask)
+
+	# Add values from bottom left to top right
+	for value in masked_map[::-1, :].flatten():
+		if value is np.ma.masked:
+			output += '\n'
+		else:
+			output += str(value) + '\n'
+
+	return output
+
+
 class Map:
 
 	def __init__(self, filename):
@@ -13,6 +35,8 @@ class Map:
 		self.filename_without_folder = filename.split('/')[-1]
 		self.cosmology = filename.split('/')[-2]
 		self._load()
+		self._find_mask()
+		self._apply_mask_set_inf()
 
 	def __getitem__(self, item):
 		return self.map[item]
@@ -20,12 +44,25 @@ class Map:
 	def _load(self):
 		self.map = np.load(self.filename)
 
+	def _find_mask(self):
+		self.mask = self.map != 0
+
+	def _apply_mask_set_inf(self):
+		self.map[~self.mask] = np.inf
+
+	def to_perseus_format(self):
+		return to_perseus_format(self.map, self.mask)
+
 	def plot(self):
 		fig, ax = plt.subplots()
 		imax = ax.imshow(self.map)
 		fig.colorbar(imax)
 
 	def _to_cubical_complex(self):
+		# import tempfile
+		# with tempfile.TemporaryFile() as file:
+		# 	file.write(self.to_perseus_format().encode())
+		# self.cubical_complex = gudhi.CubicalComplex(perseus_file=self.to_perseus_format())
 		self.cubical_complex = gudhi.CubicalComplex(top_dimensional_cells=self.map)
 		return self.cubical_complex
 	
@@ -36,8 +73,12 @@ class Map:
 		if not hasattr(self, 'cubical_complex'):
 			self._to_cubical_complex()
 		self.persistence = self.cubical_complex.persistence()
+		self._filter_persistence()
 		self._separate_persistence_dimensions()
 		return self.persistence
+	
+	def _filter_persistence(self):
+		pass
 	
 	def _separate_persistence_dimensions(self):
 		# Persistence is list of (dimension, (birth, death))
@@ -84,35 +125,30 @@ class Map:
 		# We need to generate a 2D array with 1s in the spot of each (birth, death) scatter point
 		# which will be convolved with a 2D Gaussian
 
-		def get_range(axis):
-			# Filter the data array for finite numbers such that our boundaries are properly defined
-			data_arr = self.dimension_pairs['all'][:,axis][np.isfinite(self.dimension_pairs['all'][:,axis])]
-			return np.linspace(np.min(data_arr), np.max(data_arr), resolution)
-
 		# The 2D map of the scatter points still has the same min and max in x and y
 		for dimension in self.dimension_pairs:
 			if dimension == 'all':
 				continue
 
-			birth_range = get_range(axis=0)
-			death_range = get_range(axis=1)
+			filter_for_finite = np.min(np.isfinite(self.dimension_pairs[dimension]), axis=1)
 
-			# We see these range values as bin edges (left side) for the heatmap pixels
-			heatmap = np.zeros((resolution, resolution))
+			x = self.dimension_pairs[dimension][:, 0][filter_for_finite]
+			y = self.dimension_pairs[dimension][:, 1][filter_for_finite]
 
-			for pair in self.dimension_pairs[dimension]:
-				if not np.all(np.isfinite(pair)):
-					continue
-				birth_coord = np.sum(birth_range >= pair[0]) - 1
-				death_coord = np.sum(death_range >= pair[1]) - 1
+			# We want each pixel to be a square, so we need to find the largest range of values to cover
+			data_range = [
+				np.min(self.dimension_pairs[dimension][np.isfinite(self.dimension_pairs[dimension])]), 
+				np.max(self.dimension_pairs[dimension][np.isfinite(self.dimension_pairs[dimension])])
+			]
 
-				heatmap[death_coord, birth_coord] = 1.
+			# range = [x_range, y_range], set to equal so we have square pixels
+			hist, bin_edges_x, bin_edges_y = np.histogram2d(x, y, bins=resolution, range=[data_range, data_range])
 
 			# Scale parameter of the Gaussian
-			# Set to 1/25th of the range, similar value as Heydenreich+2022
-			pixel_scale = np.abs(birth_range[0] - birth_range[1])  # FIXME: pixels are not perfect squares, as death and birth ranges are different
+			pixel_scale = np.abs(data_range[1] - data_range[0]) / resolution
 			# Determine the scale parameter (std, sigma) of the Gaussian kernel
-			scale_parameter = 1. / 25. * np.abs(birth_range[0] - birth_range[-1])
+			# Set to 1/25th of the range, similar value as Heydenreich+2022
+			scale_parameter = 1. / 25. * np.abs(data_range[1] - data_range[0])
 
 			gaussian_size_in_sigma = 3
 			sigma_in_pixel = scale_parameter / pixel_scale
@@ -121,22 +157,34 @@ class Map:
 			gaussian_kernel1d = gaussian(np.round(gaussian_size_in_pixel), std=sigma_in_pixel)
 			gaussian_kernel = np.outer(gaussian_kernel1d, gaussian_kernel1d)
 
-			heatmap = convolve2d(heatmap, gaussian_kernel, mode='same')
+			heatmap = convolve2d(hist, gaussian_kernel, mode='same')
 		
-			self.heatmaps.append(Heatmap(heatmap, (birth_range[0], birth_range[-1]), (death_range[0], death_range[-1]), dimension))
+			self.heatmaps.append(Heatmap(heatmap, data_range, data_range, dimension))
 
-			file_system.check_folder_exists(os.path.join('heatmaps', self.cosmology))
 			self.heatmaps[-1].save(os.path.join('heatmaps', self.cosmology, self.filename_without_folder))
 
-		# Diagnostic plots
-		# import os
-		# fig, ax = plt.subplots()
-		# ax.plot(gaussian_kernel1d)
-		# fig.savefig(os.path.join('plots', 'gaussian_kernel_1d.png'))
-		
-		# fig, ax = plt.subplots()
-		# ax.imshow(gaussian_kernel)
-		# fig.savefig(os.path.join('plots', 'gaussian_kernel_2d.png'))
+			self.heatmaps[-1].save_figure(os.path.join('plots', 'heatmaps', self.cosmology, self.filename_without_folder))
+
+
+def load_heatmap(path, dimension):
+	"""
+	Loads a saved Heatmap from path.
+	If directory structure is as follows:
+	/data/heatmaps/hm1/
+				heatmap0.py
+				heatmap1.py
+				birth_range0.py
+				birth_range1.py
+				death_range0.py
+				death_range1.py
+	Then the heatmap of dimension 0 can be loaded through
+		load_heatmap('/data/heatmaps/hm1', 0)
+	or dimension 1
+		load_heatmap('/data/heatmaps/hm1', 1)
+	"""
+	heatmap = Heatmap(None, None, None, dimension)
+	heatmap.load(path)
+	return heatmap
 
 	
 class Heatmap:
@@ -155,3 +203,15 @@ class Heatmap:
 		np.save(os.path.join(path, f'heatmap_{self.dimension}.npy'), self.heatmap)
 		np.save(os.path.join(path, f'birth_range_{self.dimension}.npy'), self.birth_range)
 		np.save(os.path.join(path, f'death_range_{self.dimension}.npy'), self.death_range)
+
+	def load(self, path):
+		self.heatmap = np.load(os.path.join(path, f'heatmap_{self.dimension}.npy'))
+		self.birth_range = np.load(os.path.join(path, f'birth_range_{self.dimension}.npy'))
+		self.death_range = np.load(os.path.join(path, f'death_range_{self.dimension}.npy'))
+
+	def save_figure(self, path):
+		file_system.check_folder_exists(path)
+		fig, ax = plt.subplots()
+		ax.imshow(self.heatmap[:,::-1], aspect='equal', extent=(*self.birth_range, *self.death_range))
+		fig.savefig(os.path.join(path, f'heatmap_{self.dimension}.png'))
+		plt.close(fig)
