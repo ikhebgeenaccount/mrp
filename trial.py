@@ -125,10 +125,10 @@ def all_maps():
 				print('Analzying map', i, map_path)
 				map = Map(map_path)
 				map.get_persistence()
-				map.generate_heatmaps(resolution=100)
 				curr_cosm_maps.append(map)
 			
 			pd = PersistenceDiagram(curr_cosm_maps)
+			pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 			# pd.add_average_lines()
 			pd.save(os.path.join('plots', 'persistence_diagrams'))
 			plt.close(pd.fig)
