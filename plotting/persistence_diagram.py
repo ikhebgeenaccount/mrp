@@ -74,14 +74,22 @@ class PersistenceDiagram:
 			death_after.reshape((-1, 1))
 		)
 
+		# Broadcast one array from [[a, b, c], [d, e, f]] to [[[a, b, c], [d, e, f]], [[a, b, c], [d, e, f]]]
+		# The other from [[a, b, c], [d, e, f]] to [[[a, b, c], [a, b, c]], [[d, e, f], [d, e, f]]]
+		# to be able to multiply and find every combination of born before and died after check
 		birth_side = np.broadcast_to(birth_check, (number_of_test_coords, number_of_test_coords, number_of_features))
 		death_side = np.repeat(death_check, number_of_test_coords, axis=0).reshape(number_of_test_coords, number_of_test_coords, number_of_features)
 
 		return np.sum(birth_side * death_side, axis=2)
 	
-	def generate_betti_numbers_grid(self, resolution=100):
+	def generate_betti_numbers_grid(self, resolution=100, regenerate=False):
 		
-		self.betti_numbers_grids = []
+		self.betti_numbers_grids = {}
+
+		if not regenerate and os.path.exists(os.path.join('products', 'betti_number_grids', self.cosmology)):
+			self.betti_numbers_grids[0] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 0)
+			self.betti_numbers_grids[1] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 1)
+			return self.betti_numbers_grids
 
 		for dimension in self.dimension_pairs:
 			if dimension == 'all':
@@ -99,19 +107,23 @@ class PersistenceDiagram:
 
 			betti_numbers_grid = self.get_persistent_betti_numbers(birth_range, death_range, dimension)
 			
-			self.betti_numbers_grids.append(
-				BettiNumbersGrid(betti_numbers_grid, 
-					 [birth_range[0], birth_range[-1]], 
-					 [death_range[0], death_range[-1]], 
-					 dimension=dimension)
+			self.betti_numbers_grids[dimension] = BettiNumbersGrid(betti_numbers_grid, 
+				[birth_range[0], birth_range[-1]], 
+				[death_range[0], death_range[-1]], 
+				dimension=dimension
 			)
-			self.betti_numbers_grids[-1].save_figure(
+			
+			self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology))
+
+			self.betti_numbers_grids[dimension].save_figure(
 				os.path.join('plots', 'betti_number_grids', self.cosmology), 
 				scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
 			)
+		
+		return self.betti_numbers_grids
 
 
-	def generate_heatmaps(self, resolution=1000, gaussian_kernel_size_in_sigma=3):
+	def generate_heatmaps(self, resolution=1000, gaussian_kernel_size_in_sigma=3, regenerate=False):
 		"""
 		Generates the heatmaps corresponding to the birth and death times given calculated by get_persistence.
 		The heatmap is a convolution of the birth and death times (scatterplot) with a 2D Gaussian.
@@ -120,7 +132,12 @@ class PersistenceDiagram:
 		from scipy.signal import convolve2d
 		from scipy.signal.windows import gaussian
 
-		self.heatmaps = []
+		self.heatmaps = {}
+
+		if not regenerate and os.path.exists(os.path.join('products', 'heatmaps', self.cosmology)):
+			self.heatmaps[0] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 0)
+			self.heatmaps[1] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 1)
+			return self.heatmaps
 
 		# convolve2d takes two arrays as input
 		# We need to generate a 2D array with 1s in the spot of each (birth, death) scatter point
@@ -157,11 +174,11 @@ class PersistenceDiagram:
 
 			heatmap = convolve2d(hist, gaussian_kernel, mode='same')
 		
-			self.heatmaps.append(Heatmap(heatmap, data_range, data_range, dimension))
+			self.heatmaps[dimension] = Heatmap(heatmap, data_range, data_range, dimension)
 
-			self.heatmaps[-1].save(os.path.join('heatmaps', self.cosmology))
+			self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology))
 
-			self.heatmaps[-1].save_figure(os.path.join('plots', 'heatmaps', self.cosmology))#, scatter_points=(x, y))
+			self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology))#, scatter_points=(x, y))
 		
 		return self.heatmaps
 
