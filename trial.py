@@ -128,10 +128,11 @@ def all_maps():
 				curr_cosm_maps.append(map)
 			
 			pd = PersistenceDiagram(curr_cosm_maps)
-			pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
+			# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 			# pd.add_average_lines()
-			pd.save(os.path.join('plots', 'persistence_diagrams'))
-			plt.close(pd.fig)
+			pd.generate_betti_numbers_grid()
+
+			pd.plot()
 
 
 def do_map_stuff():
@@ -174,9 +175,9 @@ def do_map_stuff():
 
 
 if __name__ == '__main__':
-	data = read_data_file('data', 'KiDS1000_MocksCat_SLICS_HR_5_LOSALL_R1.dat')
+	# data = read_data_file('data', 'KiDS1000_MocksCat_SLICS_HR_5_LOSALL_R1.dat')
 
-	create_skymap(data)
+	# create_skymap(data)
 
 	# run_athena(data)
 
