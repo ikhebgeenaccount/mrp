@@ -172,6 +172,11 @@ def all_maps():
 
 			curr_cosm_maps = []
 			for i, map_path in enumerate(tqdm(glob.glob(f'{dir}/*.npy'), leave=False)):
+				# if len(slics_pds) > 5 and not cosmoslics:
+				# 	continue
+				# if len(cosmoslics_uniq_pds) > 5 and cosmoslics:
+				# 	continue
+
 				map = Map(map_path)
 				map.get_persistence()
 				curr_cosm_maps.append(map)
@@ -186,16 +191,18 @@ def all_maps():
 				else:
 					cosmoslics_uniq_pds.append(pd)
 					cosmoslics_maps.append(map)
-			pd = PersistenceDiagram(curr_cosm_maps)
-			pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
-			# pd.add_average_lines()
-			pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
 
-			pd.plot()
+			if len(curr_cosm_maps) > 0:
+				pd = PersistenceDiagram(curr_cosm_maps)
+				pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
+				# pd.add_average_lines()
+				pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
 
-			# cosmoSLICS must be saved at cosmology level
-			if cosmoslics:
-				cosmoslics_pds.append(pd)
+				pd.plot()
+
+				# cosmoSLICS must be saved at cosmology level
+				if cosmoslics:
+					cosmoslics_pds.append(pd)
 
 	print('Calculating SLICS/cosmoSLICS variance maps...')
 	slics_bngs = {
@@ -240,16 +247,22 @@ def all_maps():
 	cosmoslics_pd = PersistenceDiagram(cosmoslics_maps)
 	cosmoslics_pd.generate_betti_numbers_grids(data_ranges_dim=data_range)
 
-	cosmoslics_uniq_bngs = {
-		dim: np.array([pd.betti_numbers_grids[dim] for pd in cosmoslics_uniq_pds]) for dim in [0, 1]
+	cosmoslics_bngs = {
+		dim: np.array([pd.betti_numbers_grids[dim].map for pd in cosmoslics_pds]) for dim in [0, 1]
 	}
 
 	for dim in [0, 1]:
-		dist_power = np.mean(np.square(cosmoslics_uniq_bngs[dim] - slics_pd.betti_numbers_grids[dim]), axis=0) / BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+		print('cosmoSLICS')
+		print(cosmoslics_bngs[dim].shape)
+		print('SLICS')
+		print(slics_pd.betti_numbers_grids[dim])
+		print((cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim]).shape)
+		print(np.mean(np.square(cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim]), axis=0).shape)
+		dist_power = np.mean(np.square(cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim].map), axis=0) / BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim).map
 
 		fig, ax = plt.subplots()
 		ax.set_title('Pixel distinguishing power')
-		imax = ax.imshow(dist_power[::-1, :])
+		imax = ax.imshow(dist_power[::-1, :], extent=(*data_range[dim], *data_range[dim]))
 		fig.colorbar(imax)
 
 		fig.savefig(os.path.join('plots', f'pixel_distinguishing_power_{dim}.png'))
