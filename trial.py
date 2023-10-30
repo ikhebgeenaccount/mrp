@@ -8,7 +8,7 @@ import treecorr
 
 import analysis.athena as athena
 from analysis.map import Map
-from plotting.persistence_diagram import PersistenceDiagram
+from analysis.persistence_diagram import PersistenceDiagram
 import glob
 
 
@@ -118,21 +118,142 @@ def create_gamma_kappa_hists(data):
 
 def all_maps():
 
-	for dir in glob.glob('maps/*'):
+	from tqdm import tqdm
+
+	print('Determining max and min values in maps...')
+	min_val = {
+		0: np.inf,
+		1: np.inf
+	}
+	max_val = {
+		0: -np.inf,
+		1: -np.inf
+	}
+	for dir in tqdm(glob.glob('maps/*')):
 		if os.path.isdir(dir):
+			for i, map_path in enumerate(tqdm(glob.glob(f'{dir}/*.npy'), leave=False)):
+				map = Map(map_path)
+				map.get_persistence()
+				pd = PersistenceDiagram([map])
+
+				for dim in [0, 1]:
+					curr_min = np.min(pd.dimension_pairs[dim])
+					curr_max = np.max(pd.dimension_pairs[dim])
+					if curr_min < min_val[dim]:
+						min_val[dim] = curr_min
+					if curr_max > max_val[dim]:
+						max_val[dim] = curr_max
+	
+	print('min=', min_val)
+	print('max=', max_val)
+
+	data_range = {
+		dim : [min_val[dim], max_val[dim]] for dim in [0, 1]
+	}
+
+	# TODO: compare SLICS variance with cosmoSLICS variance
+	# that is, compare los variance within SLICS to variance between different cosmologies
+
+	# SLICS determines the sample variance, will be a list of persistence diagrams for each line of sight
+	slics_pds = []
+	# cosmoSLICS is different cosmologies, will be a list of persistence diagrams for each cosmology
+	cosmoslics_pds = []
+	cosmoslics_uniq_pds = []
+
+	slics_maps = []
+	cosmoslics_maps = []
+
+	print('Analyzing maps...')
+	for dir in tqdm(glob.glob('maps/*')):
+		if os.path.isdir(dir):
+			cosm = dir.split('_')[-1]
+
+			cosmoslics = 'Cosmo' in cosm
+
 			curr_cosm_maps = []
-			for i, map_path in enumerate(glob.glob(f'{dir}/*.npy')):
-				print('Analzying map', i, map_path)
+			for i, map_path in enumerate(tqdm(glob.glob(f'{dir}/*.npy'), leave=False)):
 				map = Map(map_path)
 				map.get_persistence()
 				curr_cosm_maps.append(map)
-			
+
+				pd = PersistenceDiagram([map])
+				pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
+
+				# SLICS must be saved at LOS level
+				if not cosmoslics:
+					slics_pds.append(pd)
+					slics_maps.append(map)
+				else:
+					cosmoslics_uniq_pds.append(pd)
+					cosmoslics_maps.append(map)
 			pd = PersistenceDiagram(curr_cosm_maps)
-			# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
+			pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 			# pd.add_average_lines()
-			pd.generate_betti_numbers_grid()
+			pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
 
 			pd.plot()
+
+			# cosmoSLICS must be saved at cosmology level
+			if cosmoslics:
+				cosmoslics_pds.append(pd)
+
+	print('Calculating SLICS/cosmoSLICS variance maps...')
+	slics_bngs = {
+		dim: [pd.betti_numbers_grids[dim] for pd in slics_pds] for dim in [0, 1]
+	}
+	cosmoslics_bngs = {
+		dim: [pd.betti_numbers_grids[dim] for pd in cosmoslics_pds] for dim in [0, 1]
+	}
+
+	from analysis.persistence_diagram import BettiNumbersGridVarianceMap
+
+	dim = 0
+	slics_bngvm_0 = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+	slics_bngvm_0.save_figure(os.path.join('plots', 'slics'), title='SLICS variance, dim=0')
+	dim = 1
+	slics_bngvm_1 = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+	slics_bngvm_1.save_figure(os.path.join('plots', 'slics'), title='SLICS variance, dim=1')
+
+	dim = 0
+	cosmoslics_bngvm_0 = BettiNumbersGridVarianceMap(cosmoslics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+	cosmoslics_bngvm_0.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=0')
+	dim = 1
+	cosmoslics_bngvm_1 = BettiNumbersGridVarianceMap(cosmoslics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+	cosmoslics_bngvm_1.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=1')
+
+	fig, ax = plt.subplots()
+	ax.set_title('slics / cosmoslics variance, dim=0')
+	imax = ax.imshow((slics_bngvm_0.map / cosmoslics_bngvm_0.map)[::-1, :])
+	fig.colorbar(imax)
+	fig.savefig(os.path.join('plots', 'slics_cosmoslics_variance_0.png'))
+	plt.close(fig)
+
+	fig, ax = plt.subplots()
+	ax.set_title('slics / cosmoslics variance, dim=1')
+	imax = ax.imshow((slics_bngvm_1.map / cosmoslics_bngvm_1.map)[::-1, :])
+	fig.colorbar(imax)
+	fig.savefig(os.path.join('plots', 'slics_cosmoslics_variance_1.png'))
+	plt.close(fig)
+
+	slics_pd = PersistenceDiagram(slics_maps)
+	slics_pd.generate_betti_numbers_grids(data_ranges_dim=data_range)
+	cosmoslics_pd = PersistenceDiagram(cosmoslics_maps)
+	cosmoslics_pd.generate_betti_numbers_grids(data_ranges_dim=data_range)
+
+	cosmoslics_uniq_bngs = {
+		dim: np.array([pd.betti_numbers_grids[dim] for pd in cosmoslics_uniq_pds]) for dim in [0, 1]
+	}
+
+	for dim in [0, 1]:
+		dist_power = np.mean(np.square(cosmoslics_uniq_bngs[dim] - slics_pd.betti_numbers_grids[dim]), axis=0) / BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim)
+
+		fig, ax = plt.subplots()
+		ax.set_title('Pixel distinguishing power')
+		imax = ax.imshow(dist_power[::-1, :])
+		fig.colorbar(imax)
+
+		fig.savefig(os.path.join('plots', f'pixel_distinguishing_power_{dim}.png'))
+		plt.close(fig)
 
 
 def do_map_stuff():

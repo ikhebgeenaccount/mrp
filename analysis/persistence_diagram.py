@@ -9,7 +9,7 @@ from utils import file_system
 
 class PersistenceDiagram:
 
-	def __init__(self, maps: List[Map]):
+	def __init__(self, maps: List[Map], cosmology=None):
 		self.dimension_pairs = maps[0].dimension_pairs.copy()
 
 		self.maps = maps
@@ -19,9 +19,17 @@ class PersistenceDiagram:
 				self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
 
 		for dim in self.dimension_pairs:
+			# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
 			self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
 
-		self.cosmology = maps[0].cosmology
+		if cosmology is None:
+			self.cosmology = maps[0].cosmology
+		else:
+			self.cosmoly = cosmology
+
+		if len(maps) == 1:
+			# Save the line of sight discriminator if we only have one map
+			self.los = maps[0].filename_without_folder
 
 	def plot(self):
 		# Scatter each dimension separately
@@ -82,7 +90,7 @@ class PersistenceDiagram:
 
 		return np.sum(birth_side * death_side, axis=2)
 	
-	def generate_betti_numbers_grid(self, resolution=100, regenerate=False):
+	def generate_betti_numbers_grids(self, resolution=100, regenerate=False, data_ranges_dim=None):
 		
 		self.betti_numbers_grids = {}
 
@@ -100,25 +108,38 @@ class PersistenceDiagram:
 				np.max(self.dimension_pairs[dimension])
 			]
 
-			birth_range = np.linspace(*data_range, resolution)
-			death_range = np.linspace(*data_range, resolution)
+			if data_ranges_dim is None:
+				birth_linspace = np.linspace(*data_range, resolution)
+				death_linspace = np.linspace(*data_range, resolution)
+			else:
+				birth_linspace = np.linspace(*data_ranges_dim[dimension], resolution)
+				death_linspace = np.linspace(*data_ranges_dim[dimension], resolution)
 
 			betti_numbers_grid = np.zeros((resolution, resolution))
 
-			betti_numbers_grid = self.get_persistent_betti_numbers(birth_range, death_range, dimension)
+			betti_numbers_grid = self.get_persistent_betti_numbers(birth_linspace, death_linspace, dimension)
 			
 			self.betti_numbers_grids[dimension] = BettiNumbersGrid(betti_numbers_grid, 
-				[birth_range[0], birth_range[-1]], 
-				[death_range[0], death_range[-1]], 
+				[birth_linspace[0], birth_linspace[-1]], 
+				[death_linspace[0], death_linspace[-1]], 
 				dimension=dimension
 			)
 			
-			self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology))
+			if hasattr(self, 'los'):
+				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology, self.los))
 
-			self.betti_numbers_grids[dimension].save_figure(
-				os.path.join('plots', 'betti_number_grids', self.cosmology), 
-				scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
-			)
+				self.betti_numbers_grids[dimension].save_figure(
+					os.path.join('plots', 'betti_number_grids', self.cosmology, self.los), 
+					scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
+				)
+
+			else:
+				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology))
+
+				self.betti_numbers_grids[dimension].save_figure(
+					os.path.join('plots', 'betti_number_grids', self.cosmology), 
+					scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
+				)
 		
 		return self.betti_numbers_grids
 
@@ -176,11 +197,22 @@ class PersistenceDiagram:
 		
 			self.heatmaps[dimension] = Heatmap(heatmap, data_range, data_range, dimension)
 
-			self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology))
+			if hasattr(self, 'los'):
+				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology, self.los))
 
-			self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology))#, scatter_points=(x, y))
+				self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology, self.los))#, scatter_points=(x, y))
+			else:
+				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology))
+
+				self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology))#, scatter_points=(x, y))
 		
 		return self.heatmaps
+	
+	def save_fig(self, figure, base_path, file_name):
+		if hasattr(self, 'los'):
+			figure.savefig(os.path.join(base_path, self.los, file_name))
+		else:
+			figure.savefig(os.path.join(base_path, file_name))
 
 
 def load_heatmap(path, dimension):
@@ -233,18 +265,39 @@ class BaseRangedMap:
 		self.x_range = np.load(os.path.join(path, f'x_range_{self.dimension}.npy'))
 		self.y_range = np.load(os.path.join(path, f'y_range_{self.dimension}.npy'))
 
-	def save_figure(self, path, scatter_points=None):
+	def save_figure(self, path, scatter_points=None, title=None):
 		file_system.check_folder_exists(path)
 		fig, ax = plt.subplots()
 		imax = ax.imshow(self._transform_map(), aspect='equal', extent=(*self.x_range, *self.y_range))
 		fig.colorbar(imax)
+
 		if scatter_points is not None:
 			ax.scatter(*scatter_points, s=3, alpha=.6, color='red')
+
+		if title is not None:
+			ax.set_title(title)
+
 		fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.png'))
 		plt.close(fig)
 
 	def _transform_map(self):
 		return self.map
+	
+	def __add__(self, other):
+		return other + self.map
+	
+	def __sub__(self, other):
+		return self.map - other
+	
+	def __rsub__(self, other):
+		return other - self.map
+
+	def __mul__(self, other):
+		return self.map * other
+	
+	def __truediv__(self, other):
+		return self.map / other
+	
 
 class Heatmap(BaseRangedMap):
 
@@ -259,6 +312,21 @@ class BettiNumbersGrid(BaseRangedMap):
 
 	def __init__(self, betti_numbers_grid, birth_range, death_range, dimension):
 		super().__init__(betti_numbers_grid, birth_range, death_range, dimension, name='betti_numbers_grid')
+
+	def _transform_map(self):
+		return self.map[::-1, :]
+	
+
+class BettiNumbersGridVarianceMap(BaseRangedMap):
+
+	def __init__(self, betti_numbers_grids: List[BettiNumbersGrid], birth_range, death_range, dimension):
+		super().__init__(None, birth_range, death_range, dimension, name='betti_numbers_grid_variance_map')
+
+		grids = []
+		for bng in betti_numbers_grids:
+			grids.append(bng.map)
+
+		self.map = np.square(np.std(grids, axis=0))
 
 	def _transform_map(self):
 		return self.map[::-1, :]
