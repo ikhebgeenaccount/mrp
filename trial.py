@@ -11,6 +11,23 @@ from analysis.map import Map
 from analysis.persistence_diagram import PersistenceDiagram
 import glob
 
+def is_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+if is_notebook():
+	from tqdm.notebook import tqdm
+else:
+	from tqdm import tqdm
+
 
 def _generate_column_names():
 	col_names = ['RA', 'DEC', 'eps_data1', 'eps_data2', 'w', 'z', 'mbias_arun', 'mbias_angus'] + \
@@ -116,11 +133,20 @@ def create_gamma_kappa_hists(data):
 			axes[j].set_ylabel(col)
 
 
-def all_maps():
+def find_max_min_values_maps(renew=False):
 
-	from tqdm import tqdm
-
+	import json
+	
 	print('Determining max and min values in maps...')
+
+	if not renew and os.path.exists(os.path.join('maps', 'extreme_values.json')):
+		print('Found file with saved values, reading...')
+		with open(os.path.join('maps', 'extreme_values.json')) as file:
+			data_range_read = json.loads(file.readline())
+
+			# JSON format does not allow for int as key, so we change from str keys to int keys
+			return {dim: data_range_read[str(dim)] for dim in [0, 1]}
+	
 	min_val = {
 		0: np.inf,
 		1: np.inf
@@ -150,6 +176,18 @@ def all_maps():
 	data_range = {
 		dim : [min_val[dim], max_val[dim]] for dim in [0, 1]
 	}
+
+	with open(os.path.join('maps', 'extreme_values.json'), 'w') as file:
+		file.write(json.dumps(data_range))
+
+	return data_range
+
+
+def all_maps():
+
+	data_range = find_max_min_values_maps()
+
+	print(data_range)
 
 	# TODO: compare SLICS variance with cosmoSLICS variance
 	# that is, compare los variance within SLICS to variance between different cosmologies
@@ -181,7 +219,7 @@ def all_maps():
 				map.get_persistence()
 				curr_cosm_maps.append(map)
 
-				pd = PersistenceDiagram([map])
+				pd = PersistenceDiagram([map], cosmology=cosm)
 				pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
 
 				# SLICS must be saved at LOS level
@@ -193,7 +231,7 @@ def all_maps():
 					cosmoslics_maps.append(map)
 
 			if len(curr_cosm_maps) > 0:
-				pd = PersistenceDiagram(curr_cosm_maps)
+				pd = PersistenceDiagram(curr_cosm_maps, cosmology=cosm)
 				pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 				# pd.add_average_lines()
 				pd.generate_betti_numbers_grids(resolution=100, data_ranges_dim=data_range)
@@ -203,6 +241,11 @@ def all_maps():
 				# cosmoSLICS must be saved at cosmology level
 				if cosmoslics:
 					cosmoslics_pds.append(pd)
+
+	for cspd in cosmoslics_pds:
+		print(cspd.cosmology)
+		print('dim 0 featurecount =', len(cspd.dimension_pairs[0]))
+		print('dim 1 featurecount =', len(cspd.dimension_pairs[1]))
 
 	print('Calculating SLICS/cosmoSLICS variance maps...')
 	slics_bngs = {
@@ -252,13 +295,7 @@ def all_maps():
 	}
 
 	for dim in [0, 1]:
-		print('cosmoSLICS')
-		print(cosmoslics_bngs[dim].shape)
-		print('SLICS')
-		print(slics_pd.betti_numbers_grids[dim])
-		print((cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim]).shape)
-		print(np.mean(np.square(cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim]), axis=0).shape)
-		dist_power = np.mean(np.square(cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim].map), axis=0) / BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim).map
+		dist_power = np.mean(np.square(cosmoslics_bngs[dim] - slics_pd.betti_numbers_grids[dim].map) / BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=data_range[dim], death_range=data_range[dim], dimension=dim).map, axis=0)
 
 		fig, ax = plt.subplots()
 		ax.set_title('Pixel distinguishing power')
