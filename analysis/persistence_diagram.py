@@ -10,28 +10,29 @@ from utils import file_system
 class PersistenceDiagram:
 
 	def __init__(self, maps: List[Map], cosmology=None):
-		self.dimension_pairs = maps[0].dimension_pairs.copy()
+		if len(maps) > 0:
+			self.dimension_pairs = maps[0].dimension_pairs.copy()
 
-		self.maps = maps
+			self.maps = maps
 
-		for map in maps[1:]:
-			for dimension in self.dimension_pairs:
-				self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
+			for map in maps[1:]:
+				for dimension in self.dimension_pairs:
+					self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
 
-		for dim in self.dimension_pairs:
-			# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
-			self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
+			for dim in self.dimension_pairs:
+				# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
+				self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
 
 		if cosmology is None:
 			self.cosmology = maps[0].cosmology
 		else:
-			self.cosmoly = cosmology
+			self.cosmology = cosmology
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
 			self.los = maps[0].filename_without_folder
 
-	def plot(self):
+	def plot(self, close=True):
 		# Scatter each dimension separately
 		fig, ax = plt.subplots()
 		ax.set_xlabel('Birth')
@@ -53,7 +54,12 @@ class PersistenceDiagram:
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
 		fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{self.cosmology}.png'))
-		plt.close(fig)
+
+		if close:
+			plt.close(fig)
+			return None
+		else:
+			return fig, ax
 
 	def add_average_lines(self):
 		# Average death and birth
@@ -283,20 +289,20 @@ class BaseRangedMap:
 	def _transform_map(self):
 		return self.map
 	
-	def __add__(self, other):
-		return other + self.map
+	# def __add__(self, other):
+	# 	return other + self.map
 	
-	def __sub__(self, other):
-		return self.map - other
+	# def __sub__(self, other):
+	# 	return self.map - other
 	
-	def __rsub__(self, other):
-		return other - self.map
+	# def __rsub__(self, other):
+	# 	return other - self.map
 
-	def __mul__(self, other):
-		return self.map * other
+	# def __mul__(self, other):
+	# 	return self.map * other
 	
-	def __truediv__(self, other):
-		return self.map / other
+	# def __truediv__(self, other):
+	# 	return self.map / other
 	
 
 class Heatmap(BaseRangedMap):
@@ -326,7 +332,7 @@ class BettiNumbersGridVarianceMap(BaseRangedMap):
 		for bng in betti_numbers_grids:
 			grids.append(bng.map)
 
-		self.map = np.square(np.std(grids, axis=0))
+		self.map = np.std(grids, axis=0)
 
 	def _transform_map(self):
 		return self.map[::-1, :]
