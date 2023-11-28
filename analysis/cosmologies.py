@@ -12,13 +12,13 @@ def read_cosmologies_info():
 cosmologies_info = read_cosmologies_info()
 
 def get_cosmological_parameters(cosmology_id):
-	if isinstance(cosmology_id, int) or cosmology_id == 'fid':
-		return cosmologies_info[cosmologies_info['id'] == cosmology_id]
+	if isinstance(cosmology_id, int) or cosmology_id == 'fid' or (isinstance(cosmology_id, str) and cosmology_id.isdigit()):
+		return cosmologies_info[cosmologies_info['id'] == str(cosmology_id)]
 	else:
 		patt = re.compile('.*Cosmol([0-9]+|fid)')
 
 		if mat := patt.match(cosmology_id):
-			return cosmologies_info[cosmologies_info['id'] == mat]
+			return cosmologies_info[cosmologies_info['id'] == mat.group(1)]
 		else:
 			print(f'Assuming {cosmology_id} is fiducial cosmology')
 			return cosmologies_info[cosmologies_info['id'] == 'fid']
