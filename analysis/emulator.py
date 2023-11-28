@@ -28,16 +28,25 @@ class Emulator:
 	def validate(self):
 		loo = LeaveOneOut()
 
-		curr_mse = np.zeros(shape=self.training_set['scaled_target'].shape[1])
+		all_mse = []
+		curr_mse = np.zeros(shape=self.training_set['target'].shape[1])
 
 		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
 			self.regressor.fit(self.training_set['scaled_input'][train_index], self.training_set['target'][train_index])
-			
-			curr_mse += np.square(self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0])
+
+			mse = np.square(self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0])
+
+			curr_mse += mse
+			all_mse.append(mse)
 		
 		curr_mse = curr_mse / curr_mse.shape[0]
 
-		return curr_mse
+		return curr_mse, all_mse
+
+	def hyperparameter_optimization(self, param_grid):
+		# TODO
+		rcv = RandomizedSearchCV()
+		pass
 
 
 class GPREmulator(Emulator):
@@ -52,8 +61,3 @@ class MLPREmulator(Emulator):
 	def __init__(self, training_set) -> None:
 		super().__init__(training_set)
 		self.regressor = MLPRegressor()
-
-	def hyperparameter_optimization(self, param_grid):
-		# TODO
-		rcv = RandomizedSearchCV()
-		pass
