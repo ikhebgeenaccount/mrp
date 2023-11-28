@@ -31,7 +31,7 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
-		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology).to_dict()
+		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology).to_dict('records')[0]
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
