@@ -25,8 +25,10 @@ class PersistenceDiagram:
 
 		if cosmology is None:
 			self.cosmology = maps[0].cosmology
+			self.cosmology_id = maps[0].cosmology_id
 		else:
 			self.cosmology = cosmology
+			self.cosmology_id = None
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
@@ -124,6 +126,8 @@ class PersistenceDiagram:
 			betti_numbers_grid = np.zeros((resolution, resolution))
 
 			betti_numbers_grid = self.get_persistent_betti_numbers(birth_linspace, death_linspace, dimension)
+			# Normalize
+			betti_numbers_grid = betti_numbers_grid / np.max(betti_numbers_grid)
 			
 			self.betti_numbers_grids[dimension] = BettiNumbersGrid(betti_numbers_grid, 
 				[birth_linspace[0], birth_linspace[-1]], 
@@ -237,15 +241,21 @@ def load_heatmap(path, dimension):
 	or dimension 1
 		load_heatmap('/data/heatmaps/hm1', 1)
 	"""
-	heatmap = Heatmap(None, None, None, dimension)
-	heatmap.load(path)
-	return heatmap
+	return _load_ranged_map(path, dimension, Heatmap)
 
 
 def load_betti_numbers_grid(path, dimension):
-	betti_numbers_grid = BettiNumbersGrid(None, None, None, dimension)
-	betti_numbers_grid.load(path)
-	return betti_numbers_grid
+	return _load_ranged_map(path, dimension, BettiNumbersGrid)
+
+
+def load_betti_numbers_variance_map(path, dimension):
+	return _load_ranged_map(path, dimension, BettiNumbersGridVarianceMap)
+
+
+def _load_ranged_map(path, dimension, map_type):
+	rmap = map_type(None, None, None, dimension)
+	rmap.load(path)
+	return rmap
 
 	
 class BaseRangedMap:
@@ -289,21 +299,6 @@ class BaseRangedMap:
 	def _transform_map(self):
 		return self.map
 	
-	# def __add__(self, other):
-	# 	return other + self.map
-	
-	# def __sub__(self, other):
-	# 	return self.map - other
-	
-	# def __rsub__(self, other):
-	# 	return other - self.map
-
-	# def __mul__(self, other):
-	# 	return self.map * other
-	
-	# def __truediv__(self, other):
-	# 	return self.map / other
-	
 
 class Heatmap(BaseRangedMap):
 
@@ -333,6 +328,27 @@ class BettiNumbersGridVarianceMap(BaseRangedMap):
 			grids.append(bng.map)
 
 		self.map = np.std(grids, axis=0)
+
+	def _transform_map(self):
+		return self.map[::-1, :]
+
+
+class PixelDistinguishingPowerMap(BaseRangedMap):
+
+	def __init__(self, cosmoslics_bngs: List[BettiNumbersGrid], slics_bng: BettiNumbersGrid, slics_variance: BettiNumbersGridVarianceMap, dimension):
+		# Allow for an empty map to be created in which the data is loaded later
+		if cosmoslics_bngs is None and slics_bng is None and slics_variance is None:
+			super().__init__(None, None, None, dimension, 'pixel_distinguishing_power')
+		# If arrays are passed, check that the ranges are the same
+		if not np.all([np.allclose(cbng.y_range, slics_bng.y_range) for cbng in cosmoslics_bngs]):
+			raise ValueError('Death ranges are different for cosmoSLICS and SLICS BettiNumbersGrids')
+		if not np.all([np.allclose(cbng.x_range, slics_bng.x_range) for cbng in cosmoslics_bngs]):
+			raise ValueError('Birth ranges are different for cosmoSLICS and SLICS BettiNumbersGrids')
+		if not np.all([np.allclose(slics_bng.x_range, slics_variance.x_range), np.allclose(slics_bng.y_range, slics_variance.y_range)]):
+			raise ValueError('Ranges of SLICS BettiNumbersGrid and BettiNumbersVarianceGrid are different')
+		super().__init__(None, slics_bng.x_range, slics_bng.y_range, dimension, 'pixel_distinguishing_power')
+
+		self.map = np.mean(np.square([cbng.map for cbng in cosmoslics_bngs] - slics_bng.map) / slics_variance.map)
 
 	def _transform_map(self):
 		return self.map[::-1, :]

@@ -34,6 +34,12 @@ class Map:
 		self.filename = filename
 		self.filename_without_folder = filename.split('/')[-1]
 		self.cosmology = filename.split('/')[-2]
+		
+		if 'Cosmol' in self.cosmology:
+			self.cosmology_id = self.cosmology.split('Cosmol')[-1]
+		else:
+			self.cosmology_id = 'SLICS'
+			
 		self._load()
 		self._find_mask()
 		self._apply_mask_set_inf()
