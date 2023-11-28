@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from analysis.map import Map
+import analysis.cosmologies as cosmologies
 from utils import file_system
 
 class PersistenceDiagram:
@@ -29,6 +30,8 @@ class PersistenceDiagram:
 		else:
 			self.cosmology = cosmology
 			self.cosmology_id = None
+
+		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology).to_dict()
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
@@ -266,9 +269,6 @@ class BaseRangedMap:
 		self.x_range = x_range
 		self.y_range = y_range
 		self.dimension = dimension
-
-	def __getitem__(self, item):
-		return self.map[item]
 	
 	def save(self, path):
 		file_system.check_folder_exists(path)
@@ -281,7 +281,13 @@ class BaseRangedMap:
 		self.x_range = np.load(os.path.join(path, f'x_range_{self.dimension}.npy'))
 		self.y_range = np.load(os.path.join(path, f'y_range_{self.dimension}.npy'))
 
-	def save_figure(self, path, scatter_points=None, title=None):
+	def get_axis_values(self, axis):
+		if axis == 'x':
+			return np.linspace(self.x_range[0], self.x_range[1], num=len(self.map[0]))
+		elif axis == 'y':
+			return np.linspace(self.y_range[0], self.y_range[1], num=len(self.map))
+
+	def save_figure(self, path, scatter_points=None, title=None, save_name=None):
 		file_system.check_folder_exists(path)
 		fig, ax = plt.subplots()
 		imax = ax.imshow(self._transform_map(), aspect='equal', extent=(*self.x_range, *self.y_range))
@@ -293,7 +299,10 @@ class BaseRangedMap:
 		if title is not None:
 			ax.set_title(title)
 
-		fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.png'))
+		if save_name is None:
+			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.png'))
+		else:
+			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}_{save_name}.png'))
 		plt.close(fig)
 
 	def _transform_map(self):
@@ -348,7 +357,7 @@ class PixelDistinguishingPowerMap(BaseRangedMap):
 			raise ValueError('Ranges of SLICS BettiNumbersGrid and BettiNumbersVarianceGrid are different')
 		super().__init__(None, slics_bng.x_range, slics_bng.y_range, dimension, 'pixel_distinguishing_power')
 
-		self.map = np.mean(np.square([cbng.map for cbng in cosmoslics_bngs] - slics_bng.map) / slics_variance.map)
+		self.map = np.mean(np.square([cbng.map for cbng in cosmoslics_bngs] - slics_bng.map) / slics_variance.map, axis=0)
 
 	def _transform_map(self):
 		return self.map[::-1, :]

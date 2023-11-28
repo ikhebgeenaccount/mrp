@@ -9,6 +9,7 @@ import treecorr
 import analysis.athena as athena
 from analysis.map import Map
 from analysis.persistence_diagram import PersistenceDiagram
+import analysis.cosmologies as cosmologies
 import glob
 
 def is_notebook() -> bool:
@@ -131,6 +132,10 @@ def create_gamma_kappa_hists(data):
 		for j, col in enumerate([f'gamma1_cone{i}', f'gamma2_cone{i}', f'kappa_cone{i}']):
 			axes[j].hist(data[col])
 			axes[j].set_ylabel(col)
+
+
+def read_cosmologies_info():
+	return cosmologies.read_cosmologies_info()
 
 
 def find_max_min_values_maps(renew=False):
