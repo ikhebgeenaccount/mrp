@@ -23,7 +23,8 @@ class Emulator:
 		self.regressor.fit(self.training_set['input'], self.training_set['target'])
 	
 	def predict(self, X):
-		return self.regressor.predict(X)
+		# scale X through self.standard_scaler, not fitting again
+		return self.regressor.predict(self.standard_scaler.transform(X))
 	
 	def validate(self):
 		loo = LeaveOneOut()
@@ -34,7 +35,8 @@ class Emulator:
 		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
 			self.regressor.fit(self.training_set['scaled_input'][train_index], self.training_set['target'][train_index])
 
-			mse = np.square(self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0])
+			mse = np.abs(self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0]
+			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			curr_mse += mse
 			all_mse.append(mse)
