@@ -35,9 +35,14 @@ class PersistenceDiagram:
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
-			self.los = maps[0].filename_without_folder
+			if hasattr(maps[0], 'filename_without_folder'):
+				self.los = maps[0].filename_without_folder
 
-	def plot(self, close=True):
+	def plot(self, close=True, plot_args=None):
+		if plot_args is None:
+			plot_args = {
+				's': 3
+			}
 		# Scatter each dimension separately
 		fig, ax = plt.subplots()
 		ax.set_xlabel('Birth')
@@ -47,10 +52,9 @@ class PersistenceDiagram:
 			pairs = self.dimension_pairs[dimension]
 
 			# ax.scatter(pairs[np.isfinite(np.linalg.norm(pairs, axis=1)), 0], pairs[np.isfinite(np.linalg.norm(pairs, axis=1)), 1], label=f'{dimension}', s=3)
-			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'{dimension}', s=3)
+			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'{dimension}', **plot_args)
 		
 		ax.legend()
-		ax.set_title(self.cosmology)
 		lim = 0.06
 		ax.set_ylim(ymin=-lim, ymax=lim)
 		ax.set_xlim(xmin=-lim, xmax=lim)
@@ -58,6 +62,7 @@ class PersistenceDiagram:
 		eq_line = np.linspace(-lim, lim, 2)
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
+		ax.set_title(self.cosmology)
 		fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{self.cosmology}.png'))
 
 		if close:

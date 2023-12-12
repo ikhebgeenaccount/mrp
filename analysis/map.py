@@ -30,19 +30,22 @@ def to_perseus_format(map, mask=None):
 
 class Map:
 
-	def __init__(self, filename):
-		self.filename = filename
-		self.filename_without_folder = filename.split('/')[-1]
-		self.cosmology = filename.split('/')[-2]
-		
-		if 'Cosmol' in self.cosmology:
-			self.cosmology_id = self.cosmology.split('Cosmol')[-1]
-		else:
-			self.cosmology_id = 'SLICS'
+	def __init__(self, filename=None, map=None):
+		if map is None:
+			self.filename = filename
+			self.filename_without_folder = filename.split('/')[-1]
+			self.cosmology = filename.split('/')[-2]
 			
-		self._load()
-		self._find_mask()
-		self._apply_mask_set_inf()
+			if 'Cosmol' in self.cosmology:
+				self.cosmology_id = self.cosmology.split('Cosmol')[-1]
+			else:
+				self.cosmology_id = 'SLICS'
+				
+			self._load()
+			self._find_mask()
+			self._apply_mask_set_inf()
+		elif filename is None:
+			self.map = map
 
 	def __getitem__(self, item):
 		return self.map[item]
