@@ -33,8 +33,8 @@ class HistogramCompressor(Compressor):
 			curr_targ_x = []
 
 			for dim in [0, 1]:
-				histx, _ = np.histogram(perdi.dimension_pairs[dim][:, 0], bins=20)
-				histy, _ = np.histogram(perdi.dimension_pairs[dim][:, 1], bins=20)
+				histx, _ = np.histogram(perdi.dimension_pairs[dim][:, 0], bins=20, density=False)
+				histy, _ = np.histogram(perdi.dimension_pairs[dim][:, 1], bins=20, density=False)
 
 				curr_targ_both.append(histx)
 				curr_targ_both.append(histy)

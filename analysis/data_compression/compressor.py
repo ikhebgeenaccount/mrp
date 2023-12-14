@@ -25,11 +25,14 @@ class Compressor:
 		"""
 		raise NotImplementedError
 
-	def _build_covariance_matrix(self):
-		self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
-		self.cosmoslics_covariance_matrix = np.cov(self.cosmoslics_training_set['target'].T)
+	def _build_crosscorr_matrix(self):
+		self.slics_crosscorr_matrix = np.corrcoef(self.slics_training_set['target'].T)
+		# self.cosmoslics_covariance_matrix = np.corrcoef(self.cosmoslics_training_set['target'].T)
 
-	def _plot_cov_matrix(self, matrix, title=''):
+	def _build_covariance_matrix(self):
+		self.slics_covariance_matrix = np.cov(self.slics_training_set['target'])
+
+	def _plot_matrix(self, matrix, title=''):
 		fig, ax = plt.subplots()
 		imax = ax.imshow(matrix)
 		fig.colorbar(imax)
@@ -37,5 +40,9 @@ class Compressor:
 		return fig, ax
 
 	def plot_covariance_matrices(self):
-		self._plot_cov_matrix(self.slics_covariance_matrix, 'SLICS covariance matrix')
-		self._plot_cov_matrix(self.cosmoslics_covariance_matrix, 'cosmoSLICS covariance matrix')
+		self._plot_matrix(self.slics_covariance_matrix, 'SLICS covariance matrix')
+		# self._plot_cov_matrix(self.cosmoslics_covariance_matrix, 'cosmoSLICS covariance matrix')
+	
+	def plot_crosscorr_matrix(self):
+		self._build_crosscorr_matrix()
+		self._plot_matrix(self.slics_crosscorr_matrix, 'SLICS crosscorr matrix')

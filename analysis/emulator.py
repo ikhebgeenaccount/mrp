@@ -6,10 +6,18 @@ from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
+from analysis.data_compression.compressor import Compressor
+
 class Emulator:
 
-	def __init__(self, training_set):
-		self.training_set = training_set
+	def __init__(self, training_set=None, compressor: Compressor=None):
+		if training_set is not None:
+			self.compressor = None
+			self.training_set = training_set
+		elif compressor is not None:
+			self.compressor = compressor
+			self.training_set = compressor.cosmoslics_training_set
+
 		self.regressor = None
 
 		self.standard_scaler = StandardScaler()
