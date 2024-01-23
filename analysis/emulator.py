@@ -8,6 +8,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
 from analysis.data_compression.compressor import Compressor
+from analysis import cosmologies
 
 class Emulator:
 
@@ -29,6 +30,8 @@ class Emulator:
 		self.training_set['scaled_input'] = self.standard_scaler.fit_transform(self.training_set['input'])
 		self.training_set['target'] = np.array(self.training_set['target'])
 		# self.training_set['scaled_target'] = self.standard_scaler.fit_transform(self.training_set['target'])
+
+		self.data_vector_length = self.training_set['target'].shape[1]
 
 	def fit(self):
 		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])
@@ -65,18 +68,58 @@ class Emulator:
 		pass
 
 
-	def create_loocv_plot(self, avg_mse, all_mse):
+	def create_loocv_plot(self, avg_mse, all_mse, plot_cov=True):
 		fig, ax = plt.subplots()
 		ax.set_title(f'{self.training_set["name"]} after LOOCV')
+		ax.set_xlabel('Data vector entry')
+		ax.set_ylabel('Fractional error')
 		
 		ax.plot(avg_mse, label='Average fractional error', color='red', linewidth=3)
 
-		ax.plot(np.array(all_mse).T, color='black', alpha=.2, linewidth=1)
+		ax.plot(np.array(all_mse).T, color='blue', alpha=.2, linewidth=1)
 		
+		# Add covariance matrix shaded area
+		if self.compressor is not None and plot_cov:
+			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix))
+			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4)
+
 		ax.legend()
-		ax.set_xlabel('Data vector entry')
-		ax.set_ylabel('Fractional error')
 		return fig, ax
+	
+	def plot_data_vector_over_param_space(self, base_cosmology_id):		
+		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=6, figsize=(30, 4 * self.data_vector_length))
+		fig.suptitle(f'Using cosmology {base_cosmology_id}')
+
+		if self.training_set['name'] == 'number_of_features':
+			axs[0][0].set_ylabel('Connected components count')
+			axs[1][0].set_ylabel('Holes count')
+
+		for i, param in enumerate(['Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm']):
+			axs[0][i].set_title(f'{param}')
+			param_index = i
+			param_values = np.linspace(
+				np.min(self.compressor.cosmoslics_training_set['input'][:, param_index]), 
+				np.max(self.compressor.cosmoslics_training_set['input'][:, param_index]), 
+				1000
+			)
+
+			# Take base_cosmology_id's cosmological parameters as base cosmology
+			cosm_params_base = cosmologies.get_cosmological_parameters(base_cosmology_id)
+
+			# Generate new cosmological parameter sets
+			cosm_params_sets = []
+			for val in param_values:
+				temp_set = cosm_params_base[['Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm']].values.copy()
+				temp_set[0][param_index] = val
+				cosm_params_sets.append(temp_set)
+
+			cosm_params_sets = np.concatenate(cosm_params_sets)
+
+			# Predict number of features for each cosm param set
+			prediction = self.predict(cosm_params_sets)
+
+			for entry in range(self.data_vector_length):
+				axs[entry][i].plot(param_values, prediction[:, entry])
 
 
 class GPREmulator(Emulator):
@@ -95,11 +138,11 @@ class PerFeatureEmulator(Emulator):
 	"""
 	Instead of having one GPR for the whole data vector, we have one for each entry."""
 
-	def __init__(self, training_set, regressor_type):
-		super().__init__(GaussianProcessRegressor, training_set, normalize_y=True)
+	def __init__(self, regressor_type, compressor):
+		super().__init__(GaussianProcessRegressor, compressor=compressor, normalize_y=True)
 
 		# Create an emulator for each entry in the target data vector
-		self.regressors = [regressor_type(**self.regressor_args) for _ in training_set['target'][0]]
+		self.regressors = [regressor_type(**self.regressor_args) for _ in self.training_set['target'][0]]
 	
 	def fit(self):
 		pass
@@ -109,7 +152,7 @@ class PerFeatureEmulator(Emulator):
 		# TODO: fix for multiple predictions in X at once (multiple input vectors in X)
 		return np.array([[regressor.fit(scaled_X).flatten()[0] for regressor in self.regressors]])
 
-	def validate(self):
+	def validate(self, make_plot=False):
 		loo = LeaveOneOut()
 
 		all_mse = []
@@ -123,16 +166,21 @@ class PerFeatureEmulator(Emulator):
 				test_target = self.training_set['target'][test_index][:, j]
 				regr.fit(train_input, train_target)
 
-				mse.append(np.abs(test_target - regr.predict(test_input)[0]) / test_target)
+				mse.append((test_target - regr.predict(test_input)[0]) / test_target)
 				# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			mse = np.array(mse).flatten()
 			all_mse.append(mse)
 
-		return np.average(all_mse, axis=0), all_mse
+		avg_mse = np.average(all_mse, axis=0)
+
+		if make_plot:
+			self.create_loocv_plot(avg_mse, all_mse)
+
+		return avg_mse, all_mse
 
 
 class PerFeatureGPREmulator(PerFeatureEmulator):
 
-	def __init__(self, training_set):
-		super().__init__(training_set, GaussianProcessRegressor)
+	def __init__(self, compressor: Compressor):
+		super().__init__(GaussianProcessRegressor, compressor=compressor)
