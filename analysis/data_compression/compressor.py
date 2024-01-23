@@ -30,7 +30,7 @@ class Compressor:
 		# self.cosmoslics_covariance_matrix = np.corrcoef(self.cosmoslics_training_set['target'].T)
 
 	def _build_covariance_matrix(self):
-		self.slics_covariance_matrix = np.cov(self.slics_training_set['target'])
+		self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
 
 	def _plot_matrix(self, matrix, title=''):
 		fig, ax = plt.subplots()
