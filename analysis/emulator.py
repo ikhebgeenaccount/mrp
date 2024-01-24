@@ -55,7 +55,7 @@ class Emulator:
 
 			all_mse.append(mse)
 
-		avg_mse = np.average(all_mse, axis=0)
+		avg_mse = np.nanmean(all_mse, axis=0)
 
 		if make_plot:
 			self.create_loocv_plot(avg_mse, all_mse)
@@ -77,22 +77,27 @@ class Emulator:
 		ax.plot(avg_mse, label='Average fractional error', color='red', linewidth=3)
 
 		ax.plot(np.array(all_mse).T, color='blue', alpha=.2, linewidth=1)
+
+		# Dummy LOO realisation for legend
+		ax.plot(np.nan, color='blue', alpha=.2, linewidth=1, label='Single LOO realisation')
 		
 		# Add covariance matrix shaded area
 		if self.compressor is not None and plot_cov:
-			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix))
-			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4)
+			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix)) / np.average(self.compressor.cosmoslics_training_set['target'], 0)
+			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4, label='$1\sigma$ covariance')
 
 		ax.legend()
 		return fig, ax
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
-		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=6, figsize=(30, 4 * self.data_vector_length))
+		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=6, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')
 		fig.suptitle(f'Using cosmology {base_cosmology_id}')
 
 		if self.training_set['name'] == 'number_of_features':
 			axs[0][0].set_ylabel('Connected components count')
 			axs[1][0].set_ylabel('Holes count')
+
+		truths = cosmologies.get_cosmological_parameters(base_cosmology_id).values[0][1:]
 
 		for i, param in enumerate(['Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm']):
 			axs[0][i].set_title(f'{param}')
@@ -120,6 +125,7 @@ class Emulator:
 
 			for entry in range(self.data_vector_length):
 				axs[entry][i].plot(param_values, prediction[:, entry])
+				axs[entry][i].axvline(x=truths[i], linestyle='--', color='black')
 
 
 class GPREmulator(Emulator):
