@@ -66,7 +66,7 @@ class Compressor:
 	
 	def _calculate_fisher_matrix(self):
 		self.fisher_matrix = np.zeros((self.input_vector_length, self.input_vector_length))
-		slics_variance = np.sqrt(np.diag(self.slics_covariance_matrix))
+		slics_variance = np.diag(self.slics_covariance_matrix)
 		
 		for i in range(self.input_vector_length):
 			for j in range(self.input_vector_length):
@@ -130,10 +130,7 @@ class Compressor:
 		return fig, ax
 	
 	def plot_fisher_matrix(self):
-		fig, ax = plt.subplots()
-
-		imax = ax.imshow(self.fisher_matrix, origin='lower')
-		fig.colorbar(imax)
+		fig, ax = self._plot_matrix(self.fisher_matrix)
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
