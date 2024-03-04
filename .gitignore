@@ -7,10 +7,12 @@ athena_1.7/*
 athena_run/*
 maps*/*
 plots/*
+plots*/*
 venv/*
 venv_vdesk/*
 *__pycache__*
 .ipynb_checkpoints/*
 conda_mrp/*
 products/*
+products*/*
 treecorr_2pcf.out
