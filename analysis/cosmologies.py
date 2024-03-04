@@ -12,7 +12,7 @@ def read_cosmologies_info():
 cosmologies_info = read_cosmologies_info()
 
 def get_cosmological_parameters(cosmology_id):
-	if isinstance(cosmology_id, int) or cosmology_id == 'fid' or (isinstance(cosmology_id, str) and cosmology_id.isdigit()):
+	if str(cosmology_id) in cosmologies_info['id'].values:
 		return cosmologies_info[cosmologies_info['id'] == str(cosmology_id)]
 	else:
 		patt = re.compile('.*Cosmol([0-9]+|fid)')

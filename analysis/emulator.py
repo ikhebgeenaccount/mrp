@@ -83,14 +83,14 @@ class Emulator:
 		
 		# Add covariance matrix shaded area
 		if self.compressor is not None and plot_cov:
-			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix)) / np.average(self.compressor.cosmoslics_training_set['target'], 0)
+			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix)) / np.average(self.compressor.slics_training_set['target'], axis=0)
 			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4, label='$1\sigma$ covariance')
 
 		ax.legend()
 		return fig, ax
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
-		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=6, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')
+		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=4, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')
 		fig.suptitle(f'Using cosmology {base_cosmology_id}')
 
 		if self.training_set['name'] == 'number_of_features':
@@ -99,7 +99,7 @@ class Emulator:
 
 		truths = cosmologies.get_cosmological_parameters(base_cosmology_id).values[0][1:]
 
-		for i, param in enumerate(['Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm']):
+		for i, param in enumerate(['Omega_m', 'S_8', 'h', 'w_0']):
 			axs[0][i].set_title(f'{param}')
 			param_index = i
 			param_values = np.linspace(
@@ -114,7 +114,7 @@ class Emulator:
 			# Generate new cosmological parameter sets
 			cosm_params_sets = []
 			for val in param_values:
-				temp_set = cosm_params_base[['Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm']].values.copy()
+				temp_set = cosm_params_base[['Omega_m', 'S_8', 'h', 'w_0']].values.copy()
 				temp_set[0][param_index] = val
 				cosm_params_sets.append(temp_set)
 
@@ -126,6 +126,7 @@ class Emulator:
 			for entry in range(self.data_vector_length):
 				axs[entry][i].plot(param_values, prediction[:, entry])
 				axs[entry][i].axvline(x=truths[i], linestyle='--', color='black')
+				# axs[entry][i].axhline(y=truths[i], linestyle='--', color='black')
 
 
 class GPREmulator(Emulator):

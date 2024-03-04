@@ -1,8 +1,9 @@
 from typing import List
 
 import numpy as np
+from scipy.stats import moment
 from analysis.data_compression.compressor import Compressor
-from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishingPowerMap
+from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishingPowerMap, BettiNumbersGrid
 
 class BettiNumberPeaksCompressor(Compressor):
 
@@ -14,7 +15,7 @@ class BettiNumberPeaksCompressor(Compressor):
 
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
 		# Build training set with betti number peaks
-		dim_best_pixels = {}
+		self.dim_best_pixels = {}
 		training_set_peaks = {
 			'name': 'betti_number_peaks',
 			'input': [],
@@ -37,7 +38,7 @@ class BettiNumberPeaksCompressor(Compressor):
 				for x, y in zip(locmax[1], locmax[0]):
 					passes = False
 					for perdi in self.cosmoslics_pds:
-						if perdi.betti_numbers_grids[dim]._transform_map()[x, y] >= self.min_count / len(perdi.dimension_pairs[dim]):
+						if perdi.betti_numbers_grids[dim]._transform_map()[y, x] >= self.min_count / len(perdi.dimension_pairs[dim]):
 							passes = True
 							break				
 
@@ -45,7 +46,7 @@ class BettiNumberPeaksCompressor(Compressor):
 						x_ind.append(x)
 						y_ind.append(y)
 
-			dim_best_pixels[dim] = {
+			self.dim_best_pixels[dim] = {
 				'x_ind': x_ind,
 				'y_ind': y_ind,
 				'scatters': scatters
@@ -56,8 +57,8 @@ class BettiNumberPeaksCompressor(Compressor):
 			for dim in [0, 1]:
 				training_set_peaks[f'target_{dim}'].append(
 					np.concatenate((
-						[len(cpd.dimension_pairs[dim])],  # Number of features of dim
-						cpd.betti_numbers_grids[dim]._transform_map()[dim_best_pixels[dim]['x_ind'], dim_best_pixels[dim]['y_ind']]
+						[len(cpd.dimension_pairs[dim]) / cpd.maps_count],  # Number of features of dim
+						cpd.betti_numbers_grids[dim]._transform_map()[self.dim_best_pixels[dim]['y_ind'], self.dim_best_pixels[dim]['x_ind']]
 					))
 				)
 
@@ -67,9 +68,47 @@ class BettiNumberPeaksCompressor(Compressor):
 
 		return training_set_peaks
 	
+	def _add_data_vector_labels(self, ax, dim):
+		if dim == 0:
+			# Entry index starts at one since first entry is feature count, not plotted
+			entry_index = 1
+		elif dim == 1:
+			entry_index = 2 + len(self.dim_best_pixels[0]['x_ind'])
+		
+		for x, y in zip(self.dim_best_pixels[dim]['x_ind'], self.dim_best_pixels[dim]['y_ind']):
+			
+			x_values = self.pixel_distinguishing_power[dim].get_axis_values('x')[x]
+			y_values = self.pixel_distinguishing_power[dim].get_axis_values('y')[::-1][y]
+			ax.scatter(x_values, y_values, s=3, alpha=.6, color='red')
+			ax.text(x_values, y_values, str(entry_index), color='white')
+			entry_index += 1
+	
+	def visualize(self):
+		for dim in [0, 1]:
+			pix_dist_map = self.pixel_distinguishing_power[dim]
+
+			fig, ax = pix_dist_map.plot(title=f'dim={dim}', scatter_points=[self.dim_best_pixels[dim]['x_ind'], self.dim_best_pixels[dim]['y_ind']],
+							   scatters_are_index=True)
+			
+			self._add_data_vector_labels(ax, dim)
+
+			for mom in [1, 2, 3, 4]:
+				avg_bng_cosmoslics_dim = BettiNumbersGrid(
+					moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None), 
+					birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
+					death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
+					dimension=dim
+				)
+
+				fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[self.dim_best_pixels[dim]['x_ind'], self.dim_best_pixels[dim]['y_ind']],
+								scatters_are_index=True)
+				self._add_data_vector_labels(ax, dim)
+				ax.set_title(f'moment={mom}')
+
+
 
 def find_local_maxima(rmap: PixelDistinguishingPowerMap, size=5):
-	image = rmap.map
+	image = rmap._transform_map()
 	image_shifts = []
 
 	image_nonan = np.nan_to_num(image)

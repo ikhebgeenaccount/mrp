@@ -10,13 +10,17 @@ from utils import file_system
 
 class PersistenceDiagram:
 
-	def __init__(self, maps: List[Map], cosmology=None):
+	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False):
 		if len(maps) > 0:
 			self.dimension_pairs = maps[0].dimension_pairs.copy()
 
 			self.maps = maps
+			self.maps_count = len(maps)
+
+			self.dimension_pairs_list = []
 
 			for map in maps[1:]:
+				self.dimension_pairs_list.append(map.dimension_pairs)
 				for dimension in self.dimension_pairs:
 					self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
 
@@ -31,20 +35,26 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
-		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology).to_dict('records')[0]
+		self.cosm_parameters_full = cosmologies.get_cosmological_parameters(self.cosmology_id).to_dict('records')[0]
+		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology_id)[['id', 'Omega_m', 'S_8', 'h', 'w_0']].to_dict('records')[0]
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
 			if hasattr(maps[0], 'filename_without_folder'):
 				self.los = maps[0].filename_without_folder
 
-	def plot(self, close=True, plot_args=None):
+		if do_delete_maps:
+			del self.maps
+
+	def plot(self, close=True, plot_args=None, ax=None):
 		if plot_args is None:
 			plot_args = {
 				's': 3
 			}
+		new_ax = ax is None
 		# Scatter each dimension separately
-		fig, ax = plt.subplots()
+		if new_ax:
+			fig, ax = plt.subplots()
 		ax.set_xlabel('Birth')
 		ax.set_ylabel('Death')
 		for dimension in self.dimension_pairs:
@@ -63,11 +73,15 @@ class PersistenceDiagram:
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
 		ax.set_title(self.cosmology)
+		file_system.check_folder_exists(os.path.join('plots', 'persistence_diagrams'))
 		fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{self.cosmology}.png'))
+
+		if not new_ax:
+			return
 
 		if close:
 			plt.close(fig)
-			return None
+			return
 		else:
 			return fig, ax
 
@@ -288,21 +302,34 @@ class BaseRangedMap:
 
 	def get_axis_values(self, axis):
 		if axis == 'x':
-			return np.linspace(self.x_range[0], self.x_range[1], num=len(self.map[0]))
+			return np.linspace(*self.x_range, num=len(self.map[0]))
 		elif axis == 'y':
-			return np.linspace(self.y_range[0], self.y_range[1], num=len(self.map))
-
-	def save_figure(self, path, scatter_points=None, title=None, save_name=None):
-		file_system.check_folder_exists(path)
+			return np.linspace(*self.y_range, num=len(self.map))
+		
+	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False):
 		fig, ax = plt.subplots()
 		imax = ax.imshow(self._transform_map(), aspect='equal', extent=(*self.x_range, *self.y_range))
 		fig.colorbar(imax)
 
 		if scatter_points is not None:
-			ax.scatter(*scatter_points, s=3, alpha=.6, color='red')
+			c = 'red' if not heatmap_scatter_points else np.arange(0, len(scatter_points[0]), step=1)
+			cmap = 'Greys' if heatmap_scatter_points else None
+			if not scatters_are_index:
+				ax.scatter(*scatter_points, s=3, alpha=.6, c=c, cmap=cmap)
+			else:
+				x_values = self.get_axis_values('x')[scatter_points[0]]
+				y_values = self.get_axis_values('y')[::-1][scatter_points[1]]
+				ax.scatter(x_values, y_values, s=3, alpha=.6, c=c, cmap=cmap)
 
 		if title is not None:
 			ax.set_title(title)
+
+		return fig, ax
+
+	def save_figure(self, path, scatter_points=None, title=None, save_name=None):
+		file_system.check_folder_exists(path)
+		
+		fig, ax = self.plot(scatter_points, title)
 
 		if save_name is None:
 			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.png'))

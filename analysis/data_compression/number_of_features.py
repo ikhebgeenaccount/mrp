@@ -24,7 +24,7 @@ class NumberOfFeaturesCompressor(Compressor):
 			
 			for dim in [0, 1]:
 				training_set_peaks[f'target_{dim}'].append(
-					[len(cpd.dimension_pairs[dim])]
+					[len(cpd.dimension_pairs[dim]) / cpd.maps_count]
 				)
 
 		# Merge dimensions in target data

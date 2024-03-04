@@ -1,4 +1,5 @@
 import os
+import re
 
 import gudhi
 import matplotlib.pyplot as plt
@@ -30,11 +31,17 @@ def to_perseus_format(map, mask=None):
 
 class Map:
 
-	def __init__(self, filename=None, map=None):
+	def __init__(self, filename=None, map=None, three_sigma_mask=False):
 		if map is None:
 			self.filename = filename
 			self.filename_without_folder = filename.split('/')[-1]
 			self.cosmology = filename.split('/')[-2]
+
+			patt = re.compile('.+LOS([0-9]+)R([0-9]+).+')
+			mat = patt.match(self.filename_without_folder)
+
+			self.region = mat[2]
+			self.los = mat[1]
 			
 			if 'Cosmol' in self.cosmology:
 				self.cosmology_id = self.cosmology.split('Cosmol')[-1]
@@ -42,7 +49,7 @@ class Map:
 				self.cosmology_id = 'SLICS'
 				
 			self._load()
-			self._find_mask()
+			self._find_mask(three_sigma_mask=three_sigma_mask)
 			self._apply_mask_set_inf()
 		elif filename is None:
 			self.map = map
@@ -53,8 +60,11 @@ class Map:
 	def _load(self):
 		self.map = np.load(self.filename)
 
-	def _find_mask(self):
-		self.mask = self.map != 0
+	def _find_mask(self, three_sigma_mask=False):
+		if three_sigma_mask:
+			self.mask = (self.map != 0) * (self.map > -.05) * (self.map < .05)
+		else:
+			self.mask = self.map != 0
 
 	def _apply_mask_set_inf(self):
 		self.map[~self.mask] = np.inf
