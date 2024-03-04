@@ -5,7 +5,7 @@ data/*
 __pycache__/*
 athena_1.7/*
 athena_run/*
-maps/*
+maps*/*
 plots/*
 venv/*
 venv_vdesk/*
