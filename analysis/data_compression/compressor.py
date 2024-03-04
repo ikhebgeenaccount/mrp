@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 import matplotlib.pyplot as plt
+from scipy.optimize import lsq_linear
 
 from analysis.persistence_diagram import PersistenceDiagram
 
@@ -23,6 +24,7 @@ class Compressor:
 		self._build_covariance_matrix()
 		self._calculate_average_slics_data_vector()
 
+		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
 		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
@@ -43,13 +45,14 @@ class Compressor:
 		self.avg_slics_data_vector_err = np.sqrt(np.diag(self.slics_covariance_matrix))
 
 	def _calculate_derivatives_lsq(self):
-		from scipy.optimize import lsq_linear
-
 		# lsq_linear minimizes system of equations
 		# Ax - b 
 		# A are the cosmological parameters
 		# x are the functional parameters
 		# b are the pixel values corresponding to A's params
+
+		# TODO: lsq with variance?
+		self.lsq_sols = np.zeros((self.data_vector_length, self.input_vector_length))
 		
 		for entry in range(self.data_vector_length):
 			A = self.cosmoslics_training_set['input']
@@ -57,8 +60,20 @@ class Compressor:
 
 			res = lsq_linear(A, b)
 
-			print(res)
-			break
+			self.lsq_sols[entry] = res.x
+
+		return self.lsq_sols
+	
+	def _calculate_fisher_matrix(self):
+		self.fisher_matrix = np.zeros((self.input_vector_length, self.input_vector_length))
+		slics_variance = np.sqrt(np.diag(self.slics_covariance_matrix))
+		
+		for i in range(self.input_vector_length):
+			for j in range(self.input_vector_length):
+				# TODO: add variance
+				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance)
+				self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
+
 
 	def _calculate_derivatives_odr(self):
 		from scipy.odr import Model, Data, ODR
@@ -113,3 +128,12 @@ class Compressor:
 		ax.set_ylabel('Entry value / cosmoSLICS avg')
 
 		return fig, ax
+	
+	def plot_fisher_matrix(self):
+		fig, ax = plt.subplots()
+
+		imax = ax.imshow(self.fisher_matrix, origin='lower')
+		fig.colorbar(imax)
+
+		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
+		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])

@@ -27,7 +27,7 @@ class IndexCompressor(Compressor):
 		for pd in pds:
 			pds_bngs_merged = np.array([pd.betti_numbers_grids[0]._transform_map(), pd.betti_numbers_grids[1]._transform_map()])
 			training_set['input'].append(np.array([val for key, val in pd.cosm_parameters.items() if key != 'id']))
-			training_set['target'].append(pds_bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]])
+			training_set['target'].append(pds_bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
 
 		return training_set
 
