@@ -4,8 +4,8 @@
 #SBATCH --output=%x_%j.out
 #SBATCH --mail-user="abbo@strw.leidenuniv.nl"
 #SBATCH --mail-type="ALL"
-#SBATCH --partition="cpu-medium"
-#SBATCH --time=00:45:00
+#SBATCH --partition="cpu-long"
+#SBATCH --time=03:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=10M
 
