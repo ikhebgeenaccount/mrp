@@ -35,8 +35,10 @@ slics_pds = pipeline.slics_pds
 cosmoslics_pds = pipeline.cosmoslics_pds
 dist_powers = pipeline.dist_powers
 
+print('Compressing data with ChiSquaredMinimizer...')
 chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40)
 
+print('Plotting ChiSquaredMinimizer matrices and data vector...')
 chisqmin.plot_fisher_matrix()
 chisqmin.plot_crosscorr_matrix()
 chisqmin.plot_data_vectors(include_slics=True)
@@ -45,8 +47,16 @@ fig, ax = plt.subplots()
 ax.set_ylabel('$\chi^2$')
 ax.set_xlabel('Data vector entry')
 ax.plot(chisqmin.chisq_values)
-fig.savefig('plots/chisqmin_data_vector.png')
+fig.savefig('plots/chisqmin_chisq_values.png')
 
+fig, ax = plt.subplots()
+ax.set_ylabel('Determinant of Fisher matrix')
+ax.set_xlabel('Data vector entry')
+ax.plot(chisqmin.fisher_dets)
+ax.semilogy()
+fig.savefig('plots/chisqmin_fisher_dets.png')
+
+print('Creating FullGrid Fisher matrix...')
 # To compare 
 full_grid = FullGrid(cosmoslics_pds, slics_pds)
 full_grid.plot_fisher_matrix()
