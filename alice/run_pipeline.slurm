@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=run_pipeline
-#SBATCH --output=alice_output/%x_%j.out
+#SBATCH --output=%x_%j.out
 #SBATCH --mail-user="abbo@strw.leidenuniv.nl"
 #SBATCH --mail-type="ALL"
 #SBATCH --partition="cpu-long"
