@@ -40,6 +40,8 @@ class IndexCompressor(Compressor):
 
 			fig, ax = pix_dist_map.plot(title=f'dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
 							   scatters_are_index=True, heatmap_scatter_points=False)
+			
+			self._save_plot(fig, 'visualize')
 
 			# self._add_data_vector_labels(ax, dim)
 
@@ -55,6 +57,8 @@ class IndexCompressor(Compressor):
 								scatters_are_index=True)
 				# self._add_data_vector_labels(ax, dim)
 				ax.set_title(f'moment={mom}')
+
+				self._save_plot(fig, f'visualize_mom{mom}')
 
 	def _add_data_vector_labels(self, ax, dim):
 		if dim == 0:
