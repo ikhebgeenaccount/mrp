@@ -55,8 +55,9 @@ class Compressor:
 		self.lsq_sols = np.zeros((self.data_vector_length, self.input_vector_length))
 		
 		for entry in range(self.data_vector_length):
-			A = self.cosmoslics_training_set['input']
-			b = self.cosmoslics_training_set['target'][:, entry]
+			# Delta with SLICS
+			A = self.cosmoslics_training_set['input'] - self.slics_training_set['input'][0]
+			b = self.cosmoslics_training_set['target'][:, entry] - self.avg_slics_data_vector[entry]
 
 			res = lsq_linear(A, b)
 
@@ -93,20 +94,26 @@ class Compressor:
 			out = odr_.run()
 			out.pprint()
 
-	def _plot_matrix(self, matrix, title=''):
+	def _plot_matrix(self, matrix, title='', origin=None, save_name=None):
 		fig, ax = plt.subplots()
-		imax = ax.imshow(matrix)
+		imax = ax.imshow(matrix, origin=origin)
 		fig.colorbar(imax)
 		ax.set_title(title)
+
+		if save_name is not None:
+			self._save_plot(fig, save_name)
 		return fig, ax
+	
+	def _save_plot(self, fig, save_name):
+		fig.savefig(f'plots/{type(self).__name__}_{save_name}.png')
 
 	def plot_covariance_matrices(self):
-		self._plot_matrix(self.slics_covariance_matrix, 'SLICS covariance matrix')
+		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix')
 		# self._plot_cov_matrix(self.cosmoslics_covariance_matrix, 'cosmoSLICS covariance matrix')
 	
 	def plot_crosscorr_matrix(self):
 		self._build_crosscorr_matrix()
-		self._plot_matrix(self.slics_crosscorr_matrix, 'SLICS crosscorr matrix')
+		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS crosscorr matrix', save_name='slics_crosscorr_matrix')
 
 	def plot_data_vectors(self, include_slics=False):
 		fig, ax = plt.subplots()
@@ -127,10 +134,14 @@ class Compressor:
 		ax.set_xlabel('Data vector entry')
 		ax.set_ylabel('Entry value / cosmoSLICS avg')
 
+		self._save_plot(fig, 'data_vector')
+
 		return fig, ax
 	
 	def plot_fisher_matrix(self):
-		fig, ax = self._plot_matrix(self.fisher_matrix)
+		fig, ax = self._plot_matrix(self.fisher_matrix, origin='lower', title='Fisher information matrix')
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
+
+		self._save_plot(fig, 'fisher_matrix')
