@@ -40,10 +40,12 @@ class ChiSquaredMinimizer(IndexCompressor):
 
 		self.map_indices = []
 		self.chisq_values = []
+		self.fisher_dets = []
 
 		prev_chisq = 0
 		# Set chi_sq to start at 1 to make sure first index is added to vector
 		chi_sq = 1
+		fisher_det = 0
 
 		for i, new_index in enumerate(test_indices):
 			new_unrav = np.unravel_index(new_index, self.dist_powers_shape)
@@ -63,11 +65,13 @@ class ChiSquaredMinimizer(IndexCompressor):
 					sub = (temp_compressor.avg_slics_data_vector - temp_compressor.cosmoslics_training_set['target'])
 					intermed = np.matmul(sub, np.linalg.inv(temp_compressor.slics_covariance_matrix))
 					chi_sq = (1. / 26.) * np.sum(np.matmul(intermed, sub.T))
+					fisher_det = np.linalg.det(temp_compressor.fisher_matrix)
 
 				if chi_sq - prev_chisq > .2:
 					# print(f'Accepting {i}th index')
 					self.map_indices.append(new_unrav)
 					self.chisq_values.append(chi_sq)
+					self.fisher_dets.append(fisher_det)
 
 					prev_chisq = chi_sq
 			except np.linalg.LinAlgError:

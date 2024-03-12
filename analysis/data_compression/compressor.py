@@ -27,6 +27,9 @@ class Compressor:
 		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
 		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
+		self._calculate_derivatives_lsq()
+		self._calculate_fisher_matrix()
+
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
 		"""Build the training set to be used with an Emulator. Must return the training set.
 		Training sets are dictionaries containing name, input and target fields.		
@@ -72,8 +75,8 @@ class Compressor:
 		for i in range(self.input_vector_length):
 			for j in range(self.input_vector_length):
 				# TODO: add variance
-				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance)
-				self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
+				self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance)
+				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
 
 
 	def _calculate_derivatives_odr(self):
