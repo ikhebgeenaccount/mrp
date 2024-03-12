@@ -4,9 +4,13 @@
 #SBATCH --output=%x_%j.out
 #SBATCH --mail-user="abbo@strw.leidenuniv.nl"
 #SBATCH --mail-type="ALL"
-#SBATCH --partition="cpu-medium"
+#SBATCH --partition="cpu-long"
 #SBATCH --time=03:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=10M
+#SBATCH --mem=40G
 
-wget -r -np -R "index.html*" http://cuillin.roe.ac.uk/~bengib/MassMaps4JHD/ -nH --cut-dirs=2
+module load Python/3.11.3-GCCcore-12.3.0
+
+source $HOME/data1/mrp/venv/bin/activate
+
+python data_analysis.py
