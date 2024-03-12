@@ -24,7 +24,7 @@ from analysis.data_compression.full_grid import FullGrid
 from analysis.pipeline import Pipeline
 
 
-pipeline = Pipeline(filter_region=1, save_plots=True, force_recalculate=True, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+pipeline = Pipeline(save_plots=True, force_recalculate=True, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
 pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 # pipeline.all_values_histogram()
 
@@ -36,8 +36,6 @@ cosmoslics_pds = pipeline.cosmoslics_pds
 dist_powers = pipeline.dist_powers
 
 chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40)
-chisqmin._calculate_derivatives_lsq()
-chisqmin._calculate_fisher_matrix()
 
 chisqmin.plot_fisher_matrix()
 chisqmin.plot_crosscorr_matrix()
@@ -51,7 +49,5 @@ fig.savefig('plots/chisqmin_data_vector.png')
 
 # To compare 
 full_grid = FullGrid(cosmoslics_pds, slics_pds)
-full_grid._calculate_derivatives_lsq()
-full_grid._calculate_fisher_matrix()
 full_grid.plot_fisher_matrix()
 # full_grid.plot_crosscorr_matrix()
