@@ -1,13 +1,30 @@
 import glob
 import json
 import os
-from tqdm.notebook import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 
 from analysis.map import Map
 from analysis.persistence_diagram import PersistenceDiagram
 from analysis.persistence_diagram import BettiNumbersGridVarianceMap, PixelDistinguishingPowerMap
+
+
+def is_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
+if is_notebook():
+	from tqdm.notebook import tqdm
+else:
+	from tqdm import tqdm
 
 
 class Pipeline:
