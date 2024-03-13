@@ -19,13 +19,14 @@ class Compressor:
 
 		self.cosmoslics_training_set = self._build_training_set(cosmoslics_pds)
 		self.cosmoslics_training_set['target'] = np.array(self.cosmoslics_training_set['target'])
+		
+		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
+		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
+
 		self.slics_training_set = self._build_training_set(slics_pds)
 		self.slics_training_set['target'] = np.array(self.slics_training_set['target'])
 		self._build_covariance_matrix()
 		self._calculate_average_slics_data_vector()
-
-		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
-		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
 		self._calculate_derivatives_lsq()
 		self._calculate_fisher_matrix()
@@ -41,10 +42,16 @@ class Compressor:
 		# self.cosmoslics_covariance_matrix = np.corrcoef(self.cosmoslics_training_set['target'].T)
 
 	def _build_covariance_matrix(self):
-		self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
+		if self.data_vector_length == 1:
+			self.slics_covariance_matrix = np.array([[np.var(self.slics_training_set['target'].T)]])
+		else:
+			self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
 
 	def _calculate_average_slics_data_vector(self):
-		self.avg_slics_data_vector = np.average(self.slics_training_set['target'], axis=0)
+		if self.data_vector_length == 1:
+			self.avg_slics_data_vector = np.array([np.average(self.slics_training_set['target'])])
+		else:
+			self.avg_slics_data_vector = np.average(self.slics_training_set['target'], axis=0)
 		self.avg_slics_data_vector_err = np.sqrt(np.diag(self.slics_covariance_matrix))
 
 	def _calculate_derivatives_lsq(self):
@@ -70,12 +77,14 @@ class Compressor:
 	
 	def _calculate_fisher_matrix(self):
 		self.fisher_matrix = np.zeros((self.input_vector_length, self.input_vector_length))
+		self.fisher_matrix_per_entry = np.zeros((self.input_vector_length, self.input_vector_length, self.data_vector_length))
 		slics_variance = np.diag(self.slics_covariance_matrix)
 		
 		for i in range(self.input_vector_length):
 			for j in range(self.input_vector_length):
 				# TODO: add variance
 				s = self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance
+				self.fisher_matrix_per_entry[j, i] = s
 				self.fisher_matrix[j, i] = np.sum(s[np.isfinite(s)])
 				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
 

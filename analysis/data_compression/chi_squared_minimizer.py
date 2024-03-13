@@ -44,10 +44,9 @@ class ChiSquaredMinimizer(IndexCompressor):
 		self.chisq_values = []
 		self.fisher_dets = []
 
-		prev_chisq = 0
-		# Set chi_sq to start at 1 to make sure first index is added to vector
-		chi_sq = 1
-		fisher_det = 0
+		prev_chisq = 0.
+		chi_sq = 0.
+		fisher_det = 0.
 
 		for i, new_index in enumerate(test_indices):
 			new_unrav = np.unravel_index(new_index, self.dist_powers_shape)
@@ -62,17 +61,17 @@ class ChiSquaredMinimizer(IndexCompressor):
 			
 			try:
 				# The first index is always valid to add, no need to calculate anything
-				if len(self.map_indices) > 0:
+				# if len(self.map_indices) > 0:
 
-					temp_compressor = IndexCompressor(self.cosmoslics_pds, self.slics_pds, temp_map_indices)
+				temp_compressor = IndexCompressor(self.cosmoslics_pds, self.slics_pds, temp_map_indices)
 
-					# Calculate chi squared value
-					sub = (temp_compressor.avg_slics_data_vector - temp_compressor.cosmoslics_training_set['target'])
-					intermed = np.matmul(sub, np.linalg.inv(temp_compressor.slics_covariance_matrix))
-					chi_sq = (1. / 26.) * np.sum(np.matmul(intermed, sub.T))
-					fisher_det = np.linalg.det(temp_compressor.fisher_matrix)
+				# Calculate chi squared value
+				sub = (temp_compressor.avg_slics_data_vector - temp_compressor.cosmoslics_training_set['target'])
+				intermed = np.matmul(sub, np.linalg.inv(temp_compressor.slics_covariance_matrix))
+				chi_sq = (1. / 26.) * np.sum(np.matmul(intermed, sub.T))
+				fisher_det = np.linalg.det(temp_compressor.fisher_matrix)
 
-					self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
+				self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
 
 				if chi_sq - prev_chisq > .2:
 					self.debug('Accepting index')
