@@ -149,3 +149,7 @@ class Compressor:
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 
 		self._save_plot(fig, 'fisher_matrix')
+
+	def debug(self, message):
+		if self.verbose:
+			print(message)

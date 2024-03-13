@@ -9,7 +9,7 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 class ChiSquaredMinimizer(IndexCompressor):
 
 	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram],
-			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0):
+			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, verbose=False):
 		self.map_indices = None
 		self.dist_powers = dist_powers
 		self.dist_powers_merged = np.array([dist_powers[0]._transform_map(), dist_powers[1]._transform_map()])
@@ -28,6 +28,8 @@ class ChiSquaredMinimizer(IndexCompressor):
 			if np.isfinite(self.dist_powers_merged[np.unravel_index(self.dist_powers_argsort[i], self.dist_powers_shape)]):
 				break
 		self.start_index = i
+
+		self.verbose = verbose
 
 		super().__init__(cosmoslics_pds, slics_pds, indices=[])
 
@@ -51,8 +53,11 @@ class ChiSquaredMinimizer(IndexCompressor):
 			new_unrav = np.unravel_index(new_index, self.dist_powers_shape)
 			temp_map_indices = self.map_indices + [new_unrav]
 
+			self.debug(f'Testing index {new_unrav} against prev_chisq={prev_chisq:.5f}')
+
 			# Check if we have > min_count features in this index for at least one cosmoSLICS
 			if self.max_feature_count[new_unrav] < self.minimum_feature_count:
+				self.debug('Minimum feature count not reached')
 				continue
 			
 			try:
@@ -67,17 +72,21 @@ class ChiSquaredMinimizer(IndexCompressor):
 					chi_sq = (1. / 26.) * np.sum(np.matmul(intermed, sub.T))
 					fisher_det = np.linalg.det(temp_compressor.fisher_matrix)
 
+					self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
+
 				if chi_sq - prev_chisq > .2:
-					# print(f'Accepting {i}th index')
+					self.deub('Accepting index')
 					self.map_indices.append(new_unrav)
 					self.chisq_values.append(chi_sq)
 					self.fisher_dets.append(fisher_det)
 
 					prev_chisq = chi_sq
 			except np.linalg.LinAlgError:
+				self.debug('np.linalg.LinAlgError')
 				pass
 
 			if len(self.map_indices) == self.max_data_vector_length:
+				self.debug('Maximum data vector length reached')
 				break
 
 		print('Resulting length data vector:', len(self.map_indices))
