@@ -75,7 +75,7 @@ class ChiSquaredMinimizer(IndexCompressor):
 					self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
 
 				if chi_sq - prev_chisq > .2:
-					self.deub('Accepting index')
+					self.debug('Accepting index')
 					self.map_indices.append(new_unrav)
 					self.chisq_values.append(chi_sq)
 					self.fisher_dets.append(fisher_det)
