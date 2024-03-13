@@ -56,7 +56,7 @@ class Pipeline:
 		self.calculate_variance()
 
 	def _get_glob_str_dir(self):
-		return f'{self.maps_dir}/*' if self.filter_cosmology is None else f'{self.maps_dir}/*{self.filter_cosmology}'
+		return f'{self.maps_dir}/*SN0*' if self.filter_cosmology is None else f'{self.maps_dir}/*SN0*{self.filter_cosmology}'
 
 	def _get_glob_str_file(self, dir):
 		# file_f = '*SN0*.npy' if self.filter_region is None else f'*SN0*R{self.filter_region}.S*.npy'
