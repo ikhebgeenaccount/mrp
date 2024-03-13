@@ -24,7 +24,7 @@ from analysis.data_compression.full_grid import FullGrid
 from analysis.pipeline import Pipeline
 
 
-pipeline = Pipeline(save_plots=True, force_recalculate=True, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+pipeline = Pipeline(save_plots=True, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
 pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 # pipeline.all_values_histogram()
 
@@ -42,6 +42,7 @@ print('Plotting ChiSquaredMinimizer matrices and data vector...')
 chisqmin.plot_fisher_matrix()
 chisqmin.plot_crosscorr_matrix()
 chisqmin.plot_data_vectors(include_slics=True)
+chisqmin.visualize()
 
 fig, ax = plt.subplots()
 ax.set_ylabel('$\chi^2$')
