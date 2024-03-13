@@ -75,7 +75,8 @@ class Compressor:
 		for i in range(self.input_vector_length):
 			for j in range(self.input_vector_length):
 				# TODO: add variance
-				self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance)
+				s = self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance
+				self.fisher_matrix[j, i] = np.sum(s[np.isfinite(s)])
 				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
 
 
