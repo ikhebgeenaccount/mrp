@@ -88,7 +88,7 @@ class Emulator:
 
 		ax.legend()
 
-		fig.savefig(f'plots/{type(self.compressor).__name__}_{self.regressor.__name__}_loocv.png')
+		fig.savefig(f'plots/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
 		return fig, ax
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
