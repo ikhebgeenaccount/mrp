@@ -87,6 +87,8 @@ class Emulator:
 			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4, label='$1\sigma$ covariance')
 
 		ax.legend()
+
+		fig.savefig(f'plots/{type(self.compressor).__name__}_{self.regressor.__name__}_loocv.png')
 		return fig, ax
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
