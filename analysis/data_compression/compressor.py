@@ -26,7 +26,7 @@ class Compressor:
 		self.slics_training_set = self._build_training_set(slics_pds)
 		self.slics_training_set['target'] = np.array(self.slics_training_set['target'])
 		self._build_covariance_matrix()
-		self._calculate_average_slics_data_vector()
+		self._calculate_average_data_vector()
 
 		self._calculate_derivatives_lsq()
 		self._calculate_fisher_matrix()
@@ -47,11 +47,13 @@ class Compressor:
 		else:
 			self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
 
-	def _calculate_average_slics_data_vector(self):
+	def _calculate_average_data_vector(self):
 		if self.data_vector_length == 1:
 			self.avg_slics_data_vector = np.array([np.average(self.slics_training_set['target'])])
+			self.avg_cosmoslics_data_vector = np.array([np.average(self.cosmoslics_training_set['target'])])
 		else:
 			self.avg_slics_data_vector = np.average(self.slics_training_set['target'], axis=0)
+			self.avg_cosmoslics_data_vector = np.average(self.cosmoslics_training_set['target'], axis=0)
 		self.avg_slics_data_vector_err = np.sqrt(np.diag(self.slics_covariance_matrix))
 
 	def _calculate_derivatives_lsq(self):

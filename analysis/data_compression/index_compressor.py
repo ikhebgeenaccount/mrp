@@ -33,17 +33,20 @@ class IndexCompressor(Compressor):
 
 	def visualize(self):
 		for dim in [0, 1]:
-			pix_dist_map = self.dist_powers[dim]
 
 			x_ind_dim = self.indices[self.indices[:, 0] == dim][:, 2]
 			y_ind_dim = self.indices[self.indices[:, 0] == dim][:, 1]
 
-			fig, ax = pix_dist_map.plot(title=f'dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
-							   scatters_are_index=True, heatmap_scatter_points=False)
-			
-			self._save_plot(fig, f'visualize_dim{dim}')
+			for attr in ['dist_powers', 'collapsed_fisher_maps']:
+				if hasattr(self, attr):
+					pix_dist_map = getattr(self, attr)[dim]
 
-			# self._add_data_vector_labels(ax, dim)
+					fig, ax = pix_dist_map.plot(title=f'{attr} dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
+									scatters_are_index=True, heatmap_scatter_points=False)
+					
+					self._save_plot(fig, f'visualize_{attr}_dim{dim}')
+
+				# self._add_data_vector_labels(ax, dim)
 
 			for mom in [1, 2, 3, 4]:
 				avg_bng_cosmoslics_dim = BettiNumbersGrid(
@@ -56,7 +59,7 @@ class IndexCompressor(Compressor):
 				fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
 								scatters_are_index=True)
 				# self._add_data_vector_labels(ax, dim)
-				ax.set_title(f'moment={mom}')
+				ax.set_title(f'dim={dim}, moment={mom}')
 
 				self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
 
