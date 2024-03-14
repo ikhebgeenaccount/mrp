@@ -9,7 +9,7 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 class ChiSquaredMinimizer(IndexCompressor):
 
 	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram],
-			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, verbose=False):
+			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, verbose=False):
 		self.map_indices = None
 		self.dist_powers = dist_powers
 		self.dist_powers_merged = np.array([dist_powers[0]._transform_map(), dist_powers[1]._transform_map()])
@@ -28,6 +28,8 @@ class ChiSquaredMinimizer(IndexCompressor):
 			if np.isfinite(self.dist_powers_merged[np.unravel_index(self.dist_powers_argsort[i], self.dist_powers_shape)]):
 				break
 		self.start_index = i
+
+		self.chisq_increase = chisq_increase
 
 		self.verbose = verbose
 
@@ -73,7 +75,7 @@ class ChiSquaredMinimizer(IndexCompressor):
 
 				self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
 
-				if chi_sq - prev_chisq > .2:
+				if chi_sq - prev_chisq > self.chisq_increase:
 					self.debug('Accepting index')
 					self.map_indices.append(new_unrav)
 					self.chisq_values.append(chi_sq)
