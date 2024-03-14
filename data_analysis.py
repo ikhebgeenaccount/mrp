@@ -105,3 +105,6 @@ def run_mcmc(emulator, data_vector, p0, data_vector_err=None, nwalkers=100, burn
 		)
 
 		fig.savefig('plots/corner.png')
+
+
+run()
