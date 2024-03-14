@@ -191,7 +191,7 @@ class Pipeline:
 						# cosmoslics_uniq_pds.append(perdi)
 						# cosmoslics_maps.append(map)
 
-				if len(curr_cosm_maps) > 0:
+				if len(curr_cosm_maps) > 0 and cosmoslics:
 					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
