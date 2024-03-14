@@ -5,7 +5,7 @@
 #SBATCH --mail-user="abbo@strw.leidenuniv.nl"
 #SBATCH --mail-type="ALL"
 #SBATCH --partition="cpu-medium"
-#SBATCH --time=03:00:00
+#SBATCH --time=05:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=50G
 
