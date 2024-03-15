@@ -5,7 +5,7 @@ import pandas as pd
 import scipy
 import glob
 import os
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -95,7 +95,7 @@ def run_mcmc(emulator, data_vector, p0, data_vector_err=None, nwalkers=100, burn
 		state = sampler.run_mcmc(init_walkers, burn_in_steps)
 		sampler.reset()
 
-		sampler.run_mcmc(state, nsteps, progress='notebook')
+		sampler.run_mcmc(state, nsteps, progress=True)
 
 		# Make corner plot
 		flat_samples = sampler.get_chain(discard=burn_in_steps, thin=15, flat=True)
