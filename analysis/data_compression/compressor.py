@@ -90,6 +90,10 @@ class Compressor:
 				self.fisher_matrix[j, i] = np.sum(s[np.isfinite(s)])
 				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
 
+		# Calculate Fisher correlation matrix
+		# F_ij / sqrt(F_ii * F_jj)
+		diag = np.sqrt(np.diag(self.fisher_matrix))
+		self.fisher_corr_matrix = self.fisher_matrix / np.outer(diag, diag)		
 
 	def _calculate_derivatives_odr(self):
 		from scipy.odr import Model, Data, ODR
@@ -160,6 +164,13 @@ class Compressor:
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 
 		self._save_plot(fig, 'fisher_matrix')
+		
+		fig, ax = self._plot_matrix(self.fisher_corr_matrix, origin='lower', title='Fisher information correlation matrix')
+
+		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
+		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
+
+		self._save_plot(fig, 'fisher_corr_matrix')
 
 	def debug(self, message):
 		if self.verbose:
