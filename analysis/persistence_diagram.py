@@ -120,7 +120,7 @@ class PersistenceDiagram:
 
 		return np.sum(birth_side * death_side, axis=2)
 	
-	def generate_betti_numbers_grids(self, resolution=100, regenerate=False, data_ranges_dim=None):
+	def generate_betti_numbers_grids(self, resolution=100, regenerate=False, data_ranges_dim=None, save_plots=False):
 		
 		self.betti_numbers_grids = {}
 
@@ -160,18 +160,20 @@ class PersistenceDiagram:
 			if hasattr(self, 'los'):
 				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology, self.los))
 
-				self.betti_numbers_grids[dimension].save_figure(
-					os.path.join('plots', 'betti_number_grids', self.cosmology, self.los), 
-					scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
-				)
+				if save_plots:
+					self.betti_numbers_grids[dimension].save_figure(
+						os.path.join('plots', 'betti_number_grids', self.cosmology, self.los), 
+						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
+					)
 
 			else:
 				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology))
 
-				self.betti_numbers_grids[dimension].save_figure(
-					os.path.join('plots', 'betti_number_grids', self.cosmology), 
-					scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
-				)
+				if save_plots:
+					self.betti_numbers_grids[dimension].save_figure(
+						os.path.join('plots', 'betti_number_grids', self.cosmology), 
+						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
+					)
 		
 		return self.betti_numbers_grids
 
