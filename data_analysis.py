@@ -31,7 +31,7 @@ slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
 def run():
-	pipeline = Pipeline(save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+	pipeline = Pipeline(filter_region=1, save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
 
@@ -43,7 +43,7 @@ def run():
 	dist_powers = pipeline.dist_powers
 
 	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMinimizer(filter_region=1, cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.05, verbose=True)
+	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.05, verbose=True)
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
