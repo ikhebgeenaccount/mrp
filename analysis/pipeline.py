@@ -183,7 +183,7 @@ class Pipeline:
 					# SLICS must be saved at LOS level
 					if not cosmoslics:
 						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps)
-						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate)
+						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
 						self.slics_pds.append(perdi)
 						self.slics_maps.append(map)
 					else:
@@ -195,7 +195,7 @@ class Pipeline:
 					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
-					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate)
+					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
 
 					if self.save_plots:
 						perdi.plot()
