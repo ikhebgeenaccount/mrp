@@ -8,6 +8,7 @@ import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
+from joblib import dump, load
 
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.preprocessing import StandardScaler
@@ -73,7 +74,10 @@ def run():
 	chisq_em = GPREmulator(compressor=chisqmin)
 
 	chisq_em.validate(make_plot=True)
-	chisq_em.fit()	
+	chisq_em.fit()
+
+	# Pickle the Emulator
+	dump(chisq_em, 'all_regions_ChiSq_GPR_Emulator.joblib')
 
 	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, nsteps=10000, llhood='sellentin-heavens')
 
