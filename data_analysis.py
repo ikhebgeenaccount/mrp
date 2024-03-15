@@ -43,7 +43,7 @@ def run():
 	dist_powers = pipeline.dist_powers
 
 	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.05, verbose=True)
+	chisqmin = ChiSquaredMinimizer(filter_region=1, cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.05, verbose=True)
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
@@ -75,7 +75,7 @@ def run():
 	chisq_em.validate(make_plot=True)
 	chisq_em.fit()	
 
-	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, nsteps=10000)
+	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, nsteps=10000, llhood='sellentin-heavens')
 
 
 def run_mcmc(emulator, data_vector, p0, data_vector_err=None, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss'):
