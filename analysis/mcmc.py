@@ -19,6 +19,7 @@ class MCMC:
 		self.covariance_matrix = covariance_matrix
 		print('Covariance matrix inversion')
 		self.inv_cov_matrix = np.linalg.inv(covariance_matrix)
+		print(self.inv_cov_matrix)
 		
 		# self.cov_matrix_det = np.linalg.det(covariance_matrix)
 		# self.cov_det_inv_sqrt = 1. / np.sqrt(self.cov_matrix_det)
@@ -43,6 +44,8 @@ class MCMC:
 	
 	def sellentin_heavens_likelihood(self, cosm_params):
 		chisq = self.chi_squared(cosm_params)
+
+		print('chisq=', chisq)
 
 		# return self.c_p * self.cov_det_inv_sqrt / np.power(1. + gauss_ll / (self.number_of_simulations - 1), self.number_of_simulations / 2.)
 		return -.5 * self.n_slics * np.log(1 + chisq / (self.n_slics + 1)) + self.log_prior(cosm_params) #-.5 * np.log(self.cov_matrix_det) 

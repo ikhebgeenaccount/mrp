@@ -165,7 +165,7 @@ class Compressor:
 
 		self._save_plot(fig, 'fisher_matrix')
 		
-		fig, ax = self._plot_matrix(self.fisher_corr_matrix, origin='lower', title='Fisher information correlation matrix')
+		fig, ax = self._plot_matrix(self.fisher_corr_matrix, title='Fisher information correlation matrix')
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
