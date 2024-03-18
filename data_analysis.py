@@ -79,10 +79,10 @@ def run():
 	# Pickle the Emulator
 	dump(chisq_em, 'plots/all_regions_ChiSq_GPR_Emulator.joblib')
 
-	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, nsteps=10000, llhood='sellentin-heavens')
+	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, burn_in_steps=1000, nsteps=10000, llhood='sellentin-heavens')
 
 
-def run_mcmc(emulator, data_vector, p0, data_vector_err=None, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss'):
+def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss'):
 	with np.errstate(invalid='ignore'):
 		ndim = len(p0)
 
@@ -94,13 +94,17 @@ def run_mcmc(emulator, data_vector, p0, data_vector_err=None, nwalkers=100, burn
 
 		ll = mcmc_.gaussian_likelihood if llhood == 'gauss' else mcmc_.sellentin_heavens_likelihood
 
+		print('Creating EnsembleSampler')
 		sampler = EnsembleSampler(nwalkers, ndim, ll)
 
+		print('Running burn in')
 		state = sampler.run_mcmc(init_walkers, burn_in_steps)
 		sampler.reset()
 
+		print('Running MCMC')
 		sampler.run_mcmc(state, nsteps, progress=True)
 
+		print('Generating corner plot')
 		# Make corner plot
 		flat_samples = sampler.get_chain(discard=burn_in_steps, thin=15, flat=True)
 

@@ -158,7 +158,7 @@ class Compressor:
 		return fig, ax
 	
 	def plot_fisher_matrix(self):
-		fig, ax = self._plot_matrix(self.fisher_matrix, origin='lower', title='Fisher information matrix')
+		fig, ax = self._plot_matrix(self.fisher_matrix, title='Fisher information matrix')
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
