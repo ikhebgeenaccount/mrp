@@ -16,6 +16,6 @@ source $HOME/data1/mrp/venv/bin/activate
 rmk -r plots/
 mkdir plots
 
-python data_analysis.py
+python data_analysis.py -l
 
 cat run_pipeline_$SLURM_JOB_ID.out > plots/run_output.txt
