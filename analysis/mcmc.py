@@ -45,8 +45,10 @@ class MCMC:
 	def sellentin_heavens_likelihood(self, cosm_params):
 		chisq = self.chi_squared(cosm_params)
 
+		print('params=', cosm_params)
 		print('chisq=', chisq)
 		print('log_prior=', self.log_prior(cosm_params))
+		# FIXME: negative chisq leads to nan llhood
 		print('llhood=', -.5 * self.n_slics * np.log(1 + chisq / (self.n_slics + 1)) + self.log_prior(cosm_params))
 
 		# return self.c_p * self.cov_det_inv_sqrt / np.power(1. + gauss_ll / (self.number_of_simulations - 1), self.number_of_simulations / 2.)
