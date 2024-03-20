@@ -17,6 +17,7 @@ class MCMC:
 		self.data_vector = data_vector
 
 		self.covariance_matrix = covariance_matrix
+		print('cov det=', np.linalg.det(self.covariance_matrix))
 		print('Covariance matrix inversion')
 		self.inv_cov_matrix = np.linalg.inv(covariance_matrix)
 		print(self.inv_cov_matrix)
