@@ -13,6 +13,9 @@ module load Python/3.11.3-GCCcore-12.3.0
 
 source $HOME/data1/mrp/venv/bin/activate
 
+rmk -r plots/
+mkdir plots
+
 python data_analysis.py
 
 cat run_pipeline_$SLURM_JOB_ID.out > plots/run_output.txt
