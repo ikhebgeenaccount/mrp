@@ -63,8 +63,11 @@ class MCMC:
 
 		print('test_data_vector=', test_data_vector)
 		print('data_vector=', self.data_vector)
+		print('sub=', self.data_vector - test_data_vector)
 
 		intermed = np.matmul((self.data_vector - test_data_vector), self.inv_cov_matrix)
+
+		print('intermed=', intermed)
 
 		return np.matmul(intermed, (self.data_vector - test_data_vector).T).flatten()
 		# return -.5 * np.sum(np.square() / np.square(self.data_vector_err)) + self.log_prior(cosm_params)
