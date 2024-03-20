@@ -79,14 +79,14 @@ def run():
 	chisq_em.fit()
 
 	# Pickle the Emulator
-	dump(chisq_em, 'plots/all_regions_ChiSq_GPR_Emulator.joblib')
+	dump(chisq_em, 'emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
 	return chisq_em
 
 
 def run_with_pickle(pickle_path):
 	# Pickle the Emulator
-	emu = load('plots/all_regions_ChiSq_GPR_Emulator.joblib')
+	emu = load('emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
 	return emu
 
