@@ -61,6 +61,9 @@ class MCMC:
 	def chi_squared(self, cosm_params):
 		test_data_vector = self.emulator.predict([cosm_params])
 
+		print('test_data_vector=', test_data_vector)
+		print('data_vector=', self.data_vector)
+
 		intermed = np.matmul((self.data_vector - test_data_vector), self.inv_cov_matrix)
 
 		return np.matmul(intermed, (self.data_vector - test_data_vector).T).flatten()
