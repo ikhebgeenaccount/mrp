@@ -1,3 +1,4 @@
+import argparse
 import corner
 from emcee import EnsembleSampler
 import seaborn as sns
@@ -49,6 +50,7 @@ def run():
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
 	chisqmin.plot_crosscorr_matrix()
+	chisqmin.plot_covariance_matrices()
 	chisqmin.plot_data_vectors(include_slics=True)
 	chisqmin.visualize()
 
@@ -79,7 +81,14 @@ def run():
 	# Pickle the Emulator
 	dump(chisq_em, 'plots/all_regions_ChiSq_GPR_Emulator.joblib')
 
-	run_mcmc(chisq_em, chisqmin.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, nwalkers=500, burn_in_steps=1000, nsteps=10000, llhood='sellentin-heavens')
+	return chisq_em
+
+
+def run_with_pickle(pickle_path):
+	# Pickle the Emulator
+	emu = load('plots/all_regions_ChiSq_GPR_Emulator.joblib')
+
+	return emu
 
 
 def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss'):
@@ -115,4 +124,24 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 		fig.savefig('plots/corner.png')
 
 
-run()
+parser = argparse.ArgumentParser(prog='KiDS analysis pipeline')
+parser.add_argument('-l', '--load', action='store_true', help='Flag to set to load from pickle or not. Passed flag means load pickle object')
+parser.add_argument('-p', '--pickle-path', type=str, help='Path to Emulator pickle object', default='plots/all_regions_ChiSq_GPR_Emulator.joblib')
+
+parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=500)
+parser.add_argument('--burn-in-steps', type=int, default=1000, help='Number of burn in steps')
+parser.add_argument('--n-steps', type=int, default=10000, help='Number of MCMC steps (not including burn in)')
+parser.add_argument('--likelihood', type=str, default='sellentin-heavens', help='Likelihood function to use')
+
+args = parser.parse_args()
+
+if not hasattr(args, 'load'):
+	print('Creating Emulator')
+	emu = run()
+else:
+	print('Loading pickle file', args.pickle_path)
+	emu = run_with_pickle(args.pickle_path)
+
+print(f'Running MCMC with nwalkers={args.n_walkers}, burn_in_steps={args.burn_in_steps}, nsteps={args.n_steps}, llhood={args.likelihood}')
+run_mcmc(emu, emu.compressor.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, 
+		 nwalkers=args.n_walkers, burn_in_steps=args.burn_in_steps, nsteps=args.n_steps, llhood=args.likelihood)
