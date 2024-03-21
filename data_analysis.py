@@ -45,7 +45,7 @@ def run():
 	dist_powers = pipeline.dist_powers
 
 	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.05, verbose=True)
+	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.1, verbose=True)
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
