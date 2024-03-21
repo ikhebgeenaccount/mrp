@@ -33,6 +33,8 @@ slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
 def run():
+	chisq_increase = 0.1
+
 	pipeline = Pipeline(save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
@@ -45,7 +47,7 @@ def run():
 	dist_powers = pipeline.dist_powers
 
 	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=0.1, verbose=True)
+	chisqmin = ChiSquaredMinimizer(cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, minimum_feature_count=40, chisq_increase=chisq_increase, verbose=True)
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
@@ -79,7 +81,7 @@ def run():
 	chisq_em.fit()
 
 	# Pickle the Emulator
-	dump(chisq_em, 'emulators/all_regions_ChiSq_GPR_Emulator.joblib')
+	dump(chisq_em, f'emulators/all_regions_ChiSq_GPR_Emulator_{chisq_increase}chisqinc.joblib')
 
 	return chisq_em
 
