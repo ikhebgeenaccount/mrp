@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=run_pipeline
+#SBATCH --job-name=run_pipeline_load_pickle
 #SBATCH --output=%x_%j.out
 #SBATCH --mail-user="abbo@strw.leidenuniv.nl"
 #SBATCH --mail-type="ALL"

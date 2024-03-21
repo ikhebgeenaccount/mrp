@@ -137,7 +137,7 @@ parser.add_argument('--likelihood', type=str, default='sellentin-heavens', help=
 
 args = parser.parse_args()
 
-if not hasattr(args, 'load'):
+if not args.load:
 	print('Creating Emulator')
 	emu = run()
 else:
