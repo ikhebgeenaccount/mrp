@@ -11,7 +11,8 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 class ChiSquaredMinimizer(GrowingVectorCompressor):
 
 	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram],
-			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, verbose=False):
+			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, 
+			  minimum_crosscorr_det=1e-5, verbose=False):
 		self.dist_powers = dist_powers
 		self.dist_powers_merged = np.array([dist_powers[0]._transform_map(), dist_powers[1]._transform_map()])
 
@@ -22,7 +23,7 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		self.fisher_dets = []
 
 		super().__init__(cosmoslics_pds, slics_pds, pixel_scores=self.dist_powers_merged, max_data_vector_length=max_data_vector_length,
-		minimum_feature_count=minimum_feature_count, verbose=verbose)	
+		minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)	
 
 	def acceptance_func(self, compressor: IndexCompressor):
 		# Calculate chi squared value
