@@ -18,4 +18,4 @@ mkdir plots
 
 python data_analysis.py -l -p emulators/all_regions_ChiSq_GPR_Emulator_0.1chisqinc.joblib
 
-cat $SLURM_JOB_NAME_$SLURM_JOB_ID.out > plots/run_output.txt
+cat run_pipeline_load_pickle_$SLURM_JOB_ID.out > plots/run_output.txt

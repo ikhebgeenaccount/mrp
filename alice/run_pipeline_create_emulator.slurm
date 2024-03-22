@@ -18,4 +18,4 @@ mkdir plots
 
 python data_analysis.py
 
-cat $SLURM_JOB_NAME_$SLURM_JOB_ID.out > plots/run_output.txt
+cat run_pipeline_create_emulator_$SLURM_JOB_ID.out > plots/run_output.txt
