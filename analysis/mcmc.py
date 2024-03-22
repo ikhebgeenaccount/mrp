@@ -46,11 +46,11 @@ class MCMC:
 	def sellentin_heavens_likelihood(self, cosm_params):
 		chisq = self.chi_squared(cosm_params)
 
-		print('params=', cosm_params)
-		print('chisq=', chisq)
-		print('log_prior=', self.log_prior(cosm_params))
-		# FIXME: negative chisq leads to nan llhood
-		print('llhood=', -.5 * self.n_slics * np.log(1 + chisq / (self.n_slics + 1)) + self.log_prior(cosm_params))
+		# print('params=', cosm_params)
+		# print('chisq=', chisq)
+		# print('log_prior=', self.log_prior(cosm_params))
+		# # FIXME: negative chisq leads to nan llhood
+		# print('llhood=', -.5 * self.n_slics * np.log(1 + chisq / (self.n_slics + 1)) + self.log_prior(cosm_params))
 
 		# return self.c_p * self.cov_det_inv_sqrt / np.power(1. + gauss_ll / (self.number_of_simulations - 1), self.number_of_simulations / 2.)
 		return -.5 * self.n_slics * np.log(1 + chisq / (self.n_slics + 1)) + self.log_prior(cosm_params) #-.5 * np.log(self.cov_matrix_det) 
@@ -62,13 +62,13 @@ class MCMC:
 	def chi_squared(self, cosm_params):
 		test_data_vector = self.emulator.predict([cosm_params])
 
-		print('test_data_vector=', test_data_vector)
-		print('data_vector=', self.data_vector)
-		print('sub=', self.data_vector - test_data_vector)
+		# print('test_data_vector=', test_data_vector)
+		# print('data_vector=', self.data_vector)
+		# print('sub=', self.data_vector - test_data_vector)
 
 		intermed = np.matmul((self.data_vector - test_data_vector), self.inv_cov_matrix)
 
-		print('intermed=', intermed)
+		# print('intermed=', intermed)
 
 		return np.matmul(intermed, (self.data_vector - test_data_vector).T).flatten()
 		# return -.5 * np.sum(np.square() / np.square(self.data_vector_err)) + self.log_prior(cosm_params)
