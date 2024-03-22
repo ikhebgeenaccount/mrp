@@ -31,6 +31,8 @@ class Compressor:
 		self._calculate_derivatives_lsq()
 		self._calculate_fisher_matrix()
 
+		self.plots_dir = 'plots'
+
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
 		"""Build the training set to be used with an Emulator. Must return the training set.
 		Training sets are dictionaries containing name, input and target fields.		
@@ -38,7 +40,10 @@ class Compressor:
 		raise NotImplementedError
 
 	def _build_crosscorr_matrix(self):
-		self.slics_crosscorr_matrix = np.corrcoef(self.slics_training_set['target'].T)
+		if self.data_vector_length == 1:
+			self.slics_crosscorr_matrix = np.array([[1.]])
+		else:
+			self.slics_crosscorr_matrix = np.corrcoef(self.slics_training_set['target'].T)
 		# self.cosmoslics_covariance_matrix = np.corrcoef(self.cosmoslics_training_set['target'].T)
 
 	def _build_covariance_matrix(self):
@@ -124,7 +129,7 @@ class Compressor:
 		return fig, ax
 	
 	def _save_plot(self, fig, save_name):
-		fig.savefig(f'plots/{type(self).__name__}_{save_name}.png')
+		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.png')
 
 	def plot_covariance_matrices(self):
 		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix')

@@ -10,7 +10,7 @@ from analysis.persistence_diagram import PersistenceDiagram
 class GrowingVectorCompressor(IndexCompressor):
 
 	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], pixel_scores: np.ndarray,
-				max_data_vector_length: int, minimum_feature_count: float=0, verbose=False):
+				max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5, verbose=False):
 		self.map_indices = None
 		self.pixel_scores = pixel_scores
 		self.pixel_scores_shape = self.pixel_scores.shape
@@ -28,6 +28,8 @@ class GrowingVectorCompressor(IndexCompressor):
 			if np.isfinite(self.pixel_scores[np.unravel_index(self.pixel_scores_argsort[i], self.pixel_scores_shape)]):
 				break
 		self.start_index = i
+
+		self.min_crosscorr_det = minimum_crosscorr_det
 
 		self.verbose = verbose
 
@@ -61,6 +63,10 @@ class GrowingVectorCompressor(IndexCompressor):
 				# if len(self.map_indices) > 0:
 
 				temp_compressor = IndexCompressor(self.cosmoslics_pds, self.slics_pds, temp_map_indices)
+
+				temp_compressor._build_crosscorr_matrix()
+				if np.linalg.det(temp_compressor.slics_crosscorr_matrix) < self.min_crosscorr_det:
+					continue
 
 				if self.acceptance_func(temp_compressor):
 					self.map_indices.append(new_unrav)

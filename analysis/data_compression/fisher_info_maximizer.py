@@ -11,7 +11,8 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 
 class FisherInfoMaximizer(GrowingVectorCompressor):
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], data_vector_length, fisher_info_increase:float=0.05, verbose=False):
+	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], data_vector_length, 
+			  fisher_info_increase:float=0.05, minimum_crosscorr_det: float=1e-5, verbose=False):
 		self.data_vector_length = data_vector_length
 
 		full_grid = FullGrid(cosmoslics_pds, slics_pds)
@@ -24,7 +25,8 @@ class FisherInfoMaximizer(GrowingVectorCompressor):
 		self.prev_fisher_info = 0.
 		self.fisher_info_vals = []
 
-		super().__init__(cosmoslics_pds, slics_pds, pixel_scores=collapsed_fisher, max_data_vector_length=data_vector_length, verbose=verbose)
+		super().__init__(cosmoslics_pds, slics_pds, pixel_scores=collapsed_fisher, max_data_vector_length=data_vector_length,
+				   minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)
 
 	def acceptance_func(self, compressor: Compressor):
 		new_fisher_info = compressor.fisher_matrix[1, 1]

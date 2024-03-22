@@ -1,6 +1,8 @@
 from typing import List
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 from analysis.data_compression.index_compressor import IndexCompressor
 from analysis.data_compression.growing_vector_compressor import GrowingVectorCompressor
 from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishingPowerMap
@@ -41,6 +43,22 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 
 			return True
 		return False
+	
+	def visualize(self):		
+		fig, ax = plt.subplots()
+		ax.set_ylabel('$\chi^2$')
+		ax.set_xlabel('Data vector entry')
+		ax.plot(self.chisq_values)
+		self._save_plot(fig, 'chisq_values')
+
+		fig, ax = plt.subplots()
+		ax.set_ylabel('Determinant of Fisher matrix')
+		ax.set_xlabel('Data vector entry')
+		ax.plot(self.fisher_dets)
+		ax.semilogy()
+		self._save_plot(fig, 'fisher_dets')
+
+		return super().visualize()
 
 	# def _build_training_set(self, pds: List[PersistenceDiagram]):
 	# 	if self.map_indices is not None:
