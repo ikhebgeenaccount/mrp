@@ -177,6 +177,9 @@ def test():
 			res['increase'].append(chisq_inc)
 			res['final_crosscorr_det'].append(np.linalg.det(c.slics_crosscorr_matrix))
 			res['vector_length'].append(c.data_vector_length)
+	
+			df = pandas.DataFrame(res)
+			df.to_csv('plots/test_run.csv', index=False)
 		
 		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
@@ -189,8 +192,8 @@ def test():
 			res['final_crosscorr_det'].append(np.linalg.det(c.slics_crosscorr_matrix))
 			res['vector_length'].append(c.data_vector_length)
 	
-	df = pandas.DataFrame(res)
-	df.to_csv('plots/test_run.csv', index=False)
+			df = pandas.DataFrame(res)
+			df.to_csv('plots/test_run.csv', index=False)
 
 
 if __name__ == '__main__':
