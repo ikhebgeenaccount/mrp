@@ -165,9 +165,9 @@ def test():
 
 	slics_pds, cosmoslics_pds, dist_powers = run()
 
-	for min_det in list(np.logspace(-11, -1, 11)) + list(np.linspace(.1, .9, 9)):
+	for min_det in list(np.logspace(-11, -1, 6)) + list(np.linspace(.1, .9, 5)):
 
-		for chisq_inc in [.01, .02, .05, .1, .2, .5]:
+		for chisq_inc in [.01, .1, .2, .5]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_chisq{chisq_inc}'
 			os.mkdir(plots_dir)
 			c = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_inc, min_det, plots_dir=plots_dir)
@@ -178,7 +178,7 @@ def test():
 			res['final_crosscorr_det'].append(np.linalg.det(c.slics_crosscorr_matrix))
 			res['vector_length'].append(c.data_vector_length)
 		
-		for fishinfo_inc in [.005, .01, .02, .05, .1]:
+		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
 			os.mkdir(plots_dir)
 			create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
