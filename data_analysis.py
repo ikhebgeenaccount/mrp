@@ -73,7 +73,7 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
 	print('Compressing data with ChiSquaredMinimizer...')
 	fishinfo = FisherInfoMaximizer(
-		cosmoslics_pds, slics_pds, dist_powers, data_vector_length=100, 
+		cosmoslics_pds, slics_pds, data_vector_length=100, 
 		minimum_feature_count=40, fisher_info_increase=fishinfo_increase, minimum_crosscorr_det=minimum_crosscorr_det,
 		verbose=True
 	)
