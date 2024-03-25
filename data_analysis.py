@@ -188,7 +188,7 @@ def test():
 
 			res['type'].append('fishinfo')
 			res['min_det'].append(min_det)
-			res['increase'].append(chisq_inc)
+			res['increase'].append(fishinfo_inc)
 			res['final_crosscorr_det'].append(np.linalg.det(c.slics_crosscorr_matrix))
 			res['vector_length'].append(c.data_vector_length)
 	
