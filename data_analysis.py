@@ -165,7 +165,7 @@ def test():
 
 	slics_pds, cosmoslics_pds, dist_powers = run()
 
-	for min_det in list(np.logspace(-11, -1, 6)) + list(np.linspace(.1, .9, 5)):
+	for min_det in list(np.linspace(.1, .9, 5)): # list(np.logspace(-11, -3, 5)) + 
 
 		for chisq_inc in [.01, .1, .2, .5]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_chisq{chisq_inc}'
