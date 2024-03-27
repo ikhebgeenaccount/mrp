@@ -153,6 +153,21 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 
 		fig.savefig('plots/corner.png')
 
+		# Plot chains
+		fig, axes = plt.subplots(4, figsize=(10, 7), sharex=True)
+		samples = sampler.get_chain()
+		labels = ['$\Omega_m$', '$S_8$', '$h$', '$w_0$']
+		for i in range(ndim):
+			ax = axes[i]
+			ax.plot(samples[:, :, i], "k", alpha=0.3)
+			ax.set_xlim(0, len(samples))
+			ax.set_ylabel(labels[i])
+			ax.yaxis.set_label_coords(-0.1, 0.5)
+
+		axes[-1].set_xlabel("step number")
+
+		fig.savefig('plots/chains.png')
+
 
 def test():
 	res = {
