@@ -16,6 +16,6 @@ source $HOME/data1/mrp/venv/bin/activate
 rm -r plots/
 mkdir plots
 
-python data_analysis.py -l -p emulators/all_regions_ChiSq_GPR_Emulator_0.1chisqinc.joblib
+python data_analysis.py -l -p emulators/ChiSquaredMinimizer_GPREmulator.joblib
 
 cat run_pipeline_load_pickle_$SLURM_JOB_ID.out > plots/run_output.txt
