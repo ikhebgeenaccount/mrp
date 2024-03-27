@@ -218,7 +218,7 @@ if __name__ == '__main__':
 	if not args.load:
 		print('Loading data')
 		slics_pds, cosmoslics_pds, dist_powers = run()
-		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.01, minimum_crosscorr_det=.9)
+		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1)
 		emu = create_emulator(comp)
 	else:
 		print('Loading pickle file', args.pickle_path)
