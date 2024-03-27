@@ -184,7 +184,7 @@ def test():
 		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
 			os.mkdir(plots_dir)
-			create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
+			c = create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
 
 			res['type'].append('fishinfo')
 			res['min_det'].append(min_det)
@@ -218,7 +218,7 @@ if __name__ == '__main__':
 	if not args.load:
 		print('Loading data')
 		slics_pds, cosmoslics_pds, dist_powers = run()
-		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.1)
+		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.01, minimum_crosscorr_det=.9)
 		emu = create_emulator(comp)
 	else:
 		print('Loading pickle file', args.pickle_path)
