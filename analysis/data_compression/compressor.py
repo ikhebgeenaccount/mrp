@@ -131,13 +131,13 @@ class Compressor:
 	def _save_plot(self, fig, save_name):
 		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.png')
 
-	def plot_covariance_matrices(self):
+	def plot_covariance_matrix(self):
 		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix')
 		# self._plot_cov_matrix(self.cosmoslics_covariance_matrix, 'cosmoSLICS covariance matrix')
 	
-	def plot_crosscorr_matrix(self):
+	def plot_correlation_matrix(self):
 		self._build_crosscorr_matrix()
-		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS crosscorr matrix', save_name='slics_crosscorr_matrix')
+		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix')
 
 	def plot_data_vectors(self, include_slics=False):
 		fig, ax = plt.subplots()

@@ -62,8 +62,8 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
-	chisqmin.plot_crosscorr_matrix()
-	chisqmin.plot_covariance_matrices()
+	chisqmin.plot_correlation_matrix()
+	chisqmin.plot_covariance_matrix()
 	chisqmin.plot_data_vectors(include_slics=True)
 	chisqmin.visualize()
 
@@ -82,8 +82,8 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	fishinfo.plot_fisher_matrix()
-	fishinfo.plot_crosscorr_matrix()
-	fishinfo.plot_covariance_matrices()
+	fishinfo.plot_correlation_matrix()
+	fishinfo.plot_covariance_matrix()
 	fishinfo.plot_data_vectors(include_slics=True)
 
 	fishinfo.dist_powers = dist_powers
@@ -153,6 +153,21 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 
 		fig.savefig('plots/corner.png')
 
+		# Plot chains
+		fig, axes = plt.subplots(4, figsize=(10, 7), sharex=True)
+		samples = sampler.get_chain()
+		labels = ['$\Omega_m$', '$S_8$', '$h$', '$w_0$']
+		for i in range(ndim):
+			ax = axes[i]
+			ax.plot(samples[:, :, i], "k", alpha=0.3)
+			ax.set_xlim(0, len(samples))
+			ax.set_ylabel(labels[i])
+			ax.yaxis.set_label_coords(-0.1, 0.5)
+
+		axes[-1].set_xlabel("step number")
+
+		fig.savefig('plots/chains.png')
+
 
 def test():
 	res = {
@@ -201,9 +216,9 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--load', action='store_true', help='Flag to set to load from pickle or not. Passed flag means load pickle object')
 	parser.add_argument('-p', '--pickle-path', type=str, help='Path to Emulator pickle object', default='emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
-	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=500)
-	parser.add_argument('--burn-in-steps', type=int, default=1000, help='Number of burn in steps')
-	parser.add_argument('--n-steps', type=int, default=10000, help='Number of MCMC steps (not including burn in)')
+	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=1000)
+	parser.add_argument('--burn-in-steps', type=int, default=2500, help='Number of burn in steps')
+	parser.add_argument('--n-steps', type=int, default=25000, help='Number of MCMC steps (not including burn in)')
 	parser.add_argument('--likelihood', type=str, default='sellentin-heavens', help='Likelihood function to use')
 
 	parser.add_argument('-t', '--test', action='store_true', help='Run test function')
