@@ -201,9 +201,9 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--load', action='store_true', help='Flag to set to load from pickle or not. Passed flag means load pickle object')
 	parser.add_argument('-p', '--pickle-path', type=str, help='Path to Emulator pickle object', default='emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
-	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=500)
-	parser.add_argument('--burn-in-steps', type=int, default=1000, help='Number of burn in steps')
-	parser.add_argument('--n-steps', type=int, default=10000, help='Number of MCMC steps (not including burn in)')
+	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=1000)
+	parser.add_argument('--burn-in-steps', type=int, default=2500, help='Number of burn in steps')
+	parser.add_argument('--n-steps', type=int, default=25000, help='Number of MCMC steps (not including burn in)')
 	parser.add_argument('--likelihood', type=str, default='sellentin-heavens', help='Likelihood function to use')
 
 	parser.add_argument('-t', '--test', action='store_true', help='Run test function')
