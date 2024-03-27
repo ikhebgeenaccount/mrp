@@ -62,8 +62,8 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	chisqmin.plot_fisher_matrix()
-	chisqmin.plot_crosscorr_matrix()
-	chisqmin.plot_covariance_matrices()
+	chisqmin.plot_correlation_matrix()
+	chisqmin.plot_covariance_matrix()
 	chisqmin.plot_data_vectors(include_slics=True)
 	chisqmin.visualize()
 
@@ -82,8 +82,8 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
 	fishinfo.plot_fisher_matrix()
-	fishinfo.plot_crosscorr_matrix()
-	fishinfo.plot_covariance_matrices()
+	fishinfo.plot_correlation_matrix()
+	fishinfo.plot_covariance_matrix()
 	fishinfo.plot_data_vectors(include_slics=True)
 
 	fishinfo.dist_powers = dist_powers
