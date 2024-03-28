@@ -130,6 +130,7 @@ class Compressor:
 	
 	def _save_plot(self, fig, save_name):
 		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.png')
+		plt.close(fig)
 
 	def plot_covariance_matrix(self):
 		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix')

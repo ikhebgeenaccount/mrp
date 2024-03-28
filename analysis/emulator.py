@@ -113,6 +113,7 @@ class Emulator:
 		ax.plot(predictions.T, c=cmap(norm(s8_values)))
 
 		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
+		plt.close(fig)
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
 		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=4, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')
