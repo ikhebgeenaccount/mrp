@@ -92,14 +92,14 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 	return fishinfo
 
 
-def create_emulator(compressor):
+def create_emulator(compressor, save_name_addition=None):
 	chisq_em = GPREmulator(compressor=compressor)
 
 	chisq_em.validate(make_plot=True)
 	chisq_em.fit()
 
 	# Pickle the Emulator
-	dump(chisq_em, f'emulators/{type(compressor).__name__}_GPREmulator.joblib')
+	dump(chisq_em, f'emulators/{type(compressor).__name__}_GPREmulator{"" if save_name_addition is None else "_" + save_name_addition}.joblib')
 
 	return chisq_em
 
