@@ -151,7 +151,17 @@ class Compressor:
 		ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
 
 		if include_slics:
-			ax.plot(self.avg_slics_data_vector / avg_cosmoslics_data_vector, color='red', linewidth=3, alpha=.6, label='SLICS')
+			slics_norm = self.avg_slics_data_vector / avg_cosmoslics_data_vector
+			ax.plot(slics_norm, color='red', linewidth=3, alpha=.6, label='SLICS')
+
+			slics_err_norm = self.avg_slics_data_vector_err / avg_cosmoslics_data_vector
+
+			ax.fill_between(
+				np.linspace(0, self.data_vector_length - 1, num=self.data_vector_length),
+				y1=slics_norm + slics_err_norm,
+				y2=slics_norm - slics_err_norm,
+				color='grey', alpha=.4, label='$1\sigma$ SLICS covariance'
+			)
 
 		ax.legend()
 		ax.set_title('Data vectors normalized with cosmoSLICS average')
