@@ -62,7 +62,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 			# Check if we have > min_count features in this index for at least one cosmoSLICS
 			if self.max_feature_count[new_unrav] < self.minimum_feature_count:
-				self.debug('Minimum feature count not reached')
+				# self.debug('Minimum feature count not reached')
 				continue
 			
 			try:
