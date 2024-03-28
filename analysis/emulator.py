@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.neural_network import MLPRegressor
@@ -32,6 +33,8 @@ class Emulator:
 		# self.training_set['scaled_target'] = self.standard_scaler.fit_transform(self.training_set['target'])
 
 		self.data_vector_length = self.training_set['target'].shape[1]
+
+		self.plots_dir = 'plots'
 
 	def fit(self):
 		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])
@@ -88,8 +91,28 @@ class Emulator:
 
 		ax.legend()
 
-		fig.savefig(f'plots/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
+		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
 		return fig, ax
+
+	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis'):
+		s8_range = [.6, .9]
+
+		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False)
+
+		s8_values = np.linspace(*s8_range, s8_count)
+
+		cosm_params = np.broadcast_to(self.compressor.slics_training_set['input'][0], (s8_count, 4)).copy()
+		# 2nd entry is S_8
+		cosm_params[:, 1] = s8_values
+
+		predictions = self.predict(cosm_params)
+
+		# Add the predictions to the plot
+		cmap = mpl.colormaps[colormap]
+		norm = mpl.colors.Normalize(vmin=s8_range[0], vmax=s8_range[1])
+		ax.plot(predictions.T, c=cmap(norm(s8_values)))
+
+		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
 		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=4, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')

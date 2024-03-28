@@ -32,10 +32,8 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		chi_sq = (1. / 26.) * np.sum(np.matmul(intermed, sub.T))
 		fisher_det = np.linalg.det(compressor.fisher_matrix)
 
-		self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}')
-
 		if chi_sq - self.prev_chisq > self.chisq_increase:
-			self.debug('Accepting index')
+			self.debug(f'chisq={chi_sq:.5f}, fisher_det={fisher_det:.5e}, prev_chisq={self.prev_chisq:.5f}')
 
 			self.prev_chisq = chi_sq
 

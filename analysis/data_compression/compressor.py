@@ -143,8 +143,7 @@ class Compressor:
 		fig, ax = plt.subplots()
 
 		# Normalize by dividing by average of cosmoSLICS data vectors
-		avg_cosmoslics_data_vector = np.average(self.cosmoslics_training_set['target'], axis=0)
-		cosmoslics_plot = self.cosmoslics_training_set['target'] / avg_cosmoslics_data_vector
+		cosmoslics_plot = self.cosmoslics_training_set['target'] / self.avg_cosmoslics_data_vector
 
 		if include_cosmoslics:
 			ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
@@ -152,10 +151,10 @@ class Compressor:
 			ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
 
 		if include_slics:
-			slics_norm = self.avg_slics_data_vector / avg_cosmoslics_data_vector
+			slics_norm = self.avg_slics_data_vector / self.avg_cosmoslics_data_vector
 			ax.plot(slics_norm, color='red', linewidth=3, alpha=.6, label='SLICS')
 
-			slics_err_norm = self.avg_slics_data_vector_err / avg_cosmoslics_data_vector
+			slics_err_norm = self.avg_slics_data_vector_err / self.avg_cosmoslics_data_vector
 
 			ax.fill_between(
 				np.linspace(0, self.data_vector_length - 1, num=self.data_vector_length),

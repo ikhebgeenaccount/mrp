@@ -58,7 +58,7 @@ class GrowingVectorCompressor(IndexCompressor):
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
 			temp_map_indices = self.map_indices + [new_unrav]
 
-			self.debug(f'Testing index {new_unrav}')
+			# self.debug(f'Testing index {new_unrav}')
 
 			# Check if we have > min_count features in this index for at least one cosmoSLICS
 			if self.max_feature_count[new_unrav] < self.minimum_feature_count:
@@ -77,7 +77,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 				if self.acceptance_func(temp_compressor):
 					self.map_indices.append(new_unrav)
-					self.debug('Accepting index')
+					self.debug(f'Accepting index {new_unrav}')
 
 					last_i_accepted = i
 				
