@@ -111,7 +111,7 @@ class Emulator:
 		cmap = mpl.colormaps[colormap]
 		norm = mpl.colors.Normalize(vmin=s8_range[0], vmax=s8_range[1])
 
-		for i, pred in predictions:
+		for i, pred in enumerate(predictions):
 			ax.plot(pred, c=cmap(norm(s8_values[i])))
 
 		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
