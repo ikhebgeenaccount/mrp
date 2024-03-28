@@ -139,16 +139,17 @@ class Compressor:
 		self._build_crosscorr_matrix()
 		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix')
 
-	def plot_data_vectors(self, include_slics=False):
+	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True):
 		fig, ax = plt.subplots()
 
 		# Normalize by dividing by average of cosmoSLICS data vectors
 		avg_cosmoslics_data_vector = np.average(self.cosmoslics_training_set['target'], axis=0)
 		cosmoslics_plot = self.cosmoslics_training_set['target'] / avg_cosmoslics_data_vector
 
-		ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
-		# Empty plot for legend
-		ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
+		if include_cosmoslics:
+			ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
+			# Empty plot for legend
+			ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
 
 		if include_slics:
 			slics_norm = self.avg_slics_data_vector / avg_cosmoslics_data_vector
@@ -168,7 +169,8 @@ class Compressor:
 		ax.set_xlabel('Data vector entry')
 		ax.set_ylabel('Entry value / cosmoSLICS avg')
 
-		self._save_plot(fig, 'data_vector')
+		if save:
+			self._save_plot(fig, 'data_vector')
 
 		return fig, ax
 	
