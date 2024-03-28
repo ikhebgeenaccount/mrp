@@ -9,8 +9,11 @@ from analysis.persistence_diagram import PersistenceDiagram
 
 class GrowingVectorCompressor(IndexCompressor):
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], pixel_scores: np.ndarray,
-				max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5, verbose=False):
+	def __init__(
+			self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], pixel_scores: np.ndarray,
+			max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5,
+			stop_after_n_unaccepted: float=np.inf, verbose=False
+		):
 		self.map_indices = None
 		self.pixel_scores = pixel_scores
 		self.pixel_scores_shape = self.pixel_scores.shape
@@ -31,6 +34,8 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		self.min_crosscorr_det = minimum_crosscorr_det
 
+		self.stop_after_n_unaccepted = stop_after_n_unaccepted
+
 		self.verbose = verbose
 
 		super().__init__(cosmoslics_pds, slics_pds, indices=[])
@@ -46,6 +51,8 @@ class GrowingVectorCompressor(IndexCompressor):
 		test_indices = self.pixel_scores_argsort[self.start_index:]
 
 		self.map_indices = []
+
+		last_i_accepted = 0
 
 		for i, new_index in enumerate(test_indices):
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
@@ -71,6 +78,8 @@ class GrowingVectorCompressor(IndexCompressor):
 				if self.acceptance_func(temp_compressor):
 					self.map_indices.append(new_unrav)
 					self.debug('Accepting index')
+
+					last_i_accepted = i
 				
 			except np.linalg.LinAlgError:
 				self.debug('np.linalg.LinAlgError')
@@ -78,6 +87,10 @@ class GrowingVectorCompressor(IndexCompressor):
 
 			if len(self.map_indices) == self.max_data_vector_length:
 				self.debug('Maximum data vector length reached')
+				break
+
+			if i - last_i_accepted >= self.stop_after_n_unaccepted:
+				self.debug(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
 				break
 
 		print('Resulting length data vector:', len(self.map_indices))
