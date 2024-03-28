@@ -31,6 +31,8 @@ from analysis.data_compression.number_of_features import NumberOfFeaturesCompres
 from analysis.data_compression.full_grid import FullGrid
 from analysis.pipeline import Pipeline
 
+from utils.file_system import check_folder_exists
+
 
 slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
@@ -58,6 +60,7 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 		verbose=True
 	)
 
+	check_folder_exists(plots_dir)
 	chisqmin.plots_dir = plots_dir
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
@@ -78,6 +81,7 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 		verbose=True
 	)
 
+	check_folder_exists(plots_dir)
 	fishinfo.plots_dir = plots_dir
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
@@ -196,7 +200,7 @@ def test():
 
 		for chisq_inc in [.01, .1, .2, .5]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_chisq{chisq_inc}'
-			os.mkdir(plots_dir)
+			check_folder_exists(plots_dir)
 			c = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_inc, min_det, plots_dir=plots_dir)
 
 			res['type'].append('chisq')
@@ -210,7 +214,7 @@ def test():
 		
 		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
-			os.mkdir(plots_dir)
+			check_folder_exists(plots_dir)
 			c = create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
 
 			res['type'].append('fishinfo')
