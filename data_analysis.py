@@ -74,7 +74,7 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 
 
 def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
-	print('Compressing data with ChiSquaredMinimizer...')
+	print('Compressing data with FisherInfoMaximizer...')
 	fishinfo = FisherInfoMaximizer(
 		cosmoslics_pds, slics_pds, data_vector_length=100, 
 		minimum_feature_count=40, fisher_info_increase=fishinfo_increase, minimum_crosscorr_det=minimum_crosscorr_det,
@@ -84,7 +84,7 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 	check_folder_exists(plots_dir)
 	fishinfo.plots_dir = plots_dir
 
-	print('Plotting ChiSquaredMinimizer matrices and data vector...')
+	print('Plotting FisherInfoMaximizer matrices and data vector...')
 	fishinfo.plot_fisher_matrix()
 	fishinfo.plot_correlation_matrix()
 	fishinfo.plot_covariance_matrix()
@@ -211,6 +211,8 @@ def test():
 	
 			df = pandas.DataFrame(res)
 			df.to_csv('plots/test_run.csv', index=False)
+
+			create_emulator(c, save_name_addition=f'det{min_det:.1e}_chisq{chisq_inc}', plots_dir=plots_dir)
 		
 		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
@@ -225,6 +227,8 @@ def test():
 	
 			df = pandas.DataFrame(res)
 			df.to_csv('plots/test_run.csv', index=False)
+
+			create_emulator(c, save_name_addition=f'det{min_det:.1e}_fishinfo{fishinfo_inc}', plots_dir=plots_dir)
 
 
 if __name__ == '__main__':
