@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
 	if args.test:
 		print('Running test')
-		short_test()
+		test()
 		sys.exit()
 
 	if not args.load:
