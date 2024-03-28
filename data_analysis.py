@@ -35,8 +35,8 @@ from analysis.pipeline import Pipeline
 slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
-def run():
-	pipeline = Pipeline(save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+def read_maps(filter_region=None):
+	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
 
@@ -92,11 +92,13 @@ def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increa
 	return fishinfo
 
 
-def create_emulator(compressor, save_name_addition=None):
+def create_emulator(compressor, save_name_addition=None, plots_dir='plots'):
 	chisq_em = GPREmulator(compressor=compressor)
+	chisq_em.plots_dir = plots_dir
 
 	chisq_em.validate(make_plot=True)
 	chisq_em.fit()
+	chisq_em.plot_predictions_over_s8()
 
 	# Pickle the Emulator
 	dump(chisq_em, f'emulators/{type(compressor).__name__}_GPREmulator{"" if save_name_addition is None else "_" + save_name_addition}.joblib')
@@ -169,6 +171,16 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 		fig.savefig('plots/chains.png')
 
 
+def short_test():
+	slics_pds, cosmoslics_pds, dist_powers = read_maps(filter_region=1)
+
+	chisq = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, .1, .1, plots_dir='plots/chisq')
+	fishin = create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, .05, plots_dir='plots/fishinfo')
+
+	create_emulator(chisq, plots_dir='plots/chisq')
+	create_emulator(fishin, plots_dir='plots/fishinfo')
+
+
 def test():
 	res = {
 		'type': [],  # chisq or fisherinfo, type of compressor
@@ -178,7 +190,7 @@ def test():
 		'vector_length': [],
 	}
 
-	slics_pds, cosmoslics_pds, dist_powers = run()
+	slics_pds, cosmoslics_pds, dist_powers = read_maps()
 
 	for min_det in list(np.linspace(.1, .9, 5)): # list(np.logspace(-11, -3, 5)) + 
 
@@ -227,12 +239,12 @@ if __name__ == '__main__':
 
 	if args.test:
 		print('Running test')
-		test()
+		short_test()
 		sys.exit()
 
 	if not args.load:
 		print('Loading data')
-		slics_pds, cosmoslics_pds, dist_powers = run()
+		slics_pds, cosmoslics_pds, dist_powers = read_maps()
 		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1)
 		emu = create_emulator(comp)
 	else:
