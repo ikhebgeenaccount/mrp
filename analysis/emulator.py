@@ -37,24 +37,24 @@ class Emulator:
 		self.plots_dir = 'plots'
 
 	def fit(self):
-		self.regressor.fit(self.training_set['input'], self.training_set['target'])
+		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])
 	
 	def predict(self, X):
 		# scale X through self.standard_scaler, not fitting again
 		# print(self.regressor.predict(X, return_std=True))
-		return self.regressor.predict(X)
+		return self.regressor.predict(self.standard_scaler.transform(X))
 	
 	def validate(self, make_plot=False):
 		loo = LeaveOneOut()
 
 		all_mse = []
 
-		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['input'])):
+		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
 			temp_regr = self.regressor_type(**self.regressor_args)
-			temp_regr.fit(self.training_set['input'][train_index], self.training_set['target'][train_index])
+			temp_regr.fit(self.training_set['scaled_input'][train_index], self.training_set['target'][train_index])
 
 			# Not np.abs to also get negative error
-			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['input'][test_index])[0]) / self.training_set['target'][test_index][0]
+			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0]
 			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			all_mse.append(mse)
