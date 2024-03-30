@@ -37,23 +37,24 @@ class Emulator:
 		self.plots_dir = 'plots'
 
 	def fit(self):
-		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])
+		self.regressor.fit(self.training_set['input'], self.training_set['target'])
 	
 	def predict(self, X):
 		# scale X through self.standard_scaler, not fitting again
-		return self.regressor.predict(self.standard_scaler.transform(X))
+		# print(self.regressor.predict(X, return_std=True))
+		return self.regressor.predict(X)
 	
 	def validate(self, make_plot=False):
 		loo = LeaveOneOut()
 
 		all_mse = []
 
-		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
+		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['input'])):
 			temp_regr = self.regressor_type(**self.regressor_args)
-			temp_regr.fit(self.training_set['scaled_input'][train_index], self.training_set['target'][train_index])
+			temp_regr.fit(self.training_set['input'][train_index], self.training_set['target'][train_index])
 
 			# Not np.abs to also get negative error
-			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0]
+			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['input'][test_index])[0]) / self.training_set['target'][test_index][0]
 			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			all_mse.append(mse)
@@ -94,10 +95,10 @@ class Emulator:
 		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
 		return fig, ax
 
-	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis'):
+	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis', save=True):
 		s8_range = [.6, .9]
 
-		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False)
+		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, abs_value=False)
 
 		s8_values = np.linspace(*s8_range, s8_count)
 
@@ -112,10 +113,11 @@ class Emulator:
 		norm = mpl.colors.Normalize(vmin=s8_range[0], vmax=s8_range[1])
 
 		for i, pred in enumerate(predictions):
-			ax.plot(pred, c=cmap(norm(s8_values[i])))
+			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector, c=cmap(norm(s8_values[i])))
 
-		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
-		plt.close(fig)
+		if save:
+			fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
+			plt.close(fig)
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
 		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=4, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')

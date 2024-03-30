@@ -140,11 +140,16 @@ class Compressor:
 		self._build_crosscorr_matrix()
 		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix')
 
-	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True):
+	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, abs_value=False):
 		fig, ax = plt.subplots()
 
+		if abs_value:
+			avg_cosmoslics = 1.
+		else:
+			avg_cosmoslics = self.avg_cosmoslics_data_vector
+
 		# Normalize by dividing by average of cosmoSLICS data vectors
-		cosmoslics_plot = self.cosmoslics_training_set['target'] / self.avg_cosmoslics_data_vector
+		cosmoslics_plot = self.cosmoslics_training_set['target'] / avg_cosmoslics
 
 		if include_cosmoslics:
 			ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
@@ -152,10 +157,10 @@ class Compressor:
 			ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
 
 		if include_slics:
-			slics_norm = self.avg_slics_data_vector / self.avg_cosmoslics_data_vector
+			slics_norm = self.avg_slics_data_vector / avg_cosmoslics
 			ax.plot(slics_norm, color='red', linewidth=3, alpha=.6, label='SLICS')
 
-			slics_err_norm = self.avg_slics_data_vector_err / self.avg_cosmoslics_data_vector
+			slics_err_norm = self.avg_slics_data_vector_err / avg_cosmoslics
 
 			ax.fill_between(
 				np.linspace(0, self.data_vector_length - 1, num=self.data_vector_length),
@@ -165,9 +170,13 @@ class Compressor:
 			)
 
 		ax.legend()
-		ax.set_title('Data vectors normalized with cosmoSLICS average')
+		if abs_value:
+			ax.set_title('Data vectors')
+			ax.set_ylabel('Entry value')
+		else:
+			ax.set_title('Data vectors normalized with cosmoSLICS average')
+			ax.set_ylabel('Entry value / cosmoSLICS avg')
 		ax.set_xlabel('Data vector entry')
-		ax.set_ylabel('Entry value / cosmoSLICS avg')
 
 		if save:
 			self._save_plot(fig, 'data_vector')
