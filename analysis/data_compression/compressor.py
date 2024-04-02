@@ -140,7 +140,7 @@ class Compressor:
 		self._build_crosscorr_matrix()
 		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix')
 
-	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, abs_value=False):
+	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, abs_value=False, logy=False):
 		fig, ax = plt.subplots()
 
 		if abs_value:
@@ -169,6 +169,9 @@ class Compressor:
 				color='grey', alpha=.4, label='$1\sigma$ SLICS covariance'
 			)
 
+		if logy:
+			ax.semilogy()
+
 		ax.legend()
 		if abs_value:
 			ax.set_title('Data vectors')
@@ -179,7 +182,7 @@ class Compressor:
 		ax.set_xlabel('Data vector entry')
 
 		if save:
-			self._save_plot(fig, 'data_vector')
+			self._save_plot(fig, f'data_vector{"" if not abs_value else "_abs"}{"" if not logy else "_logy"}')
 
 		return fig, ax
 	
