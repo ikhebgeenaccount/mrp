@@ -112,6 +112,13 @@ class Emulator:
 		cmap = mpl.colormaps[colormap]
 		norm = mpl.colors.Normalize(vmin=s8_range[0], vmax=s8_range[1])
 
+		# ScalarMappable for colorbar
+		sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+		sm.set_array([])
+		cbar = fig.colorbar(sm, ax=ax)
+		cbar.set_label('$S_8$')
+		cbar.ax.axhline(self.compressor.slics_training_set['input'][0][1], color='black', linestyle='dotted')
+
 		for i, pred in enumerate(predictions):
 			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector, c=cmap(norm(s8_values[i])))
 
