@@ -203,6 +203,8 @@ def test():
 			check_folder_exists(plots_dir)
 			c = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_inc, min_det, plots_dir=plots_dir)
 
+			c.plot_data_vectors(save=False, include_slics=True, logy=True, abs_value=True)
+
 			res['type'].append('chisq')
 			res['min_det'].append(min_det)
 			res['increase'].append(chisq_inc)
@@ -218,6 +220,8 @@ def test():
 			plots_dir = f'plots/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
 			check_folder_exists(plots_dir)
 			c = create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
+
+			c.plot_data_vectors(save=False, include_slics=True, logy=True, abs_value=True)
 
 			res['type'].append('fishinfo')
 			res['min_det'].append(min_det)
