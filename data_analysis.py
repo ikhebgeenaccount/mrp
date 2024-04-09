@@ -185,7 +185,19 @@ def short_test():
 	create_emulator(fishin, plots_dir='plots/fishinfo')
 
 
-def test():
+def test_dist_power():
+	pipeline = Pipeline(save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
+	pipeline.read_maps()
+	pipeline.calculate_variance()
+	slics_pds = pipeline.slics_pds
+	cosmoslics_pds = pipeline.cosmoslics_pds
+	dist_powers = pipeline.dist_powers
+	for dp in dist_powers:
+		dp.save_figure('plots')
+
+
+def test_hyperparameters():
 	res = {
 		'type': [],  # chisq or fisherinfo, type of compressor
 		'min_det': [],
@@ -251,7 +263,7 @@ if __name__ == '__main__':
 
 	if args.test:
 		print('Running test')
-		test()
+		test_dist_power()
 		sys.exit()
 
 	if not args.load:
