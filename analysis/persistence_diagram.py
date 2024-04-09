@@ -391,7 +391,7 @@ class PixelDistinguishingPowerMap(BaseRangedMap):
 			raise ValueError('Ranges of SLICS BettiNumbersGrid and BettiNumbersVarianceGrid are different')
 		super().__init__(None, slics_bng.x_range, slics_bng.y_range, dimension, 'pixel_distinguishing_power')
 
-		self.map = np.mean(np.square([cbng.map for cbng in cosmoslics_bngs] - slics_bng.map) / slics_variance.map, axis=0)
+		self.map = np.mean(np.abs(([cbng.map for cbng in cosmoslics_bngs] - slics_bng.map) / slics_variance.map), axis=0)
 
 	def _transform_map(self):
 		return self.map[::-1, :]
