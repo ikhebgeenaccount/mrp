@@ -31,7 +31,9 @@ def to_perseus_format(map, mask=None):
 
 class Map:
 
-	def __init__(self, filename=None, map=None, three_sigma_mask=False):
+	def __init__(self, filename=None, map=None, three_sigma_mask=False, lazy_load=False):
+		self.lazy_load = lazy_load
+		self.three_sigma_mask = three_sigma_mask
 		if map is None:
 			self.filename = filename
 			self.filename_without_folder = filename.split('/')[-1]
@@ -47,18 +49,30 @@ class Map:
 				self.cosmology_id = self.cosmology.split('Cosmol')[-1]
 			else:
 				self.cosmology_id = 'SLICS'
-				
-			self._load()
-			self._find_mask(three_sigma_mask=three_sigma_mask)
-			self._apply_mask_set_inf()
+
+			if not lazy_load:
+				self._load()
 		elif filename is None:
 			self.map = map
 
-	def __getitem__(self, item):
-		return self.map[item]
+	def __getattribute__(self, item):
+		# Just return if not lazy loading
+		if not self.lazy_load:
+			return object.__getattribute__(self, item)
+		# If map is asked, we need to load first
+		if item == 'map':
+			self._load()
+			return self.map
+		if item == 'dimension_pairs':
+			self.get_persistence()
+			return self.dimension_pairs
+		# Every other item can just be returned
+		return object.__getattribute__(self, item)
 
 	def _load(self):
 		self.map = np.load(self.filename)
+		self._find_mask(three_sigma_mask=self.three_sigma_mask)
+		self._apply_mask_set_inf()
 
 	def _find_mask(self, three_sigma_mask=False):
 		if three_sigma_mask:
