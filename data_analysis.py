@@ -38,7 +38,7 @@ slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
 def read_maps(filter_region=None):
-	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True)
+	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True, lazy_load=True)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
 
