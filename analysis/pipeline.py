@@ -29,16 +29,18 @@ else:
 
 class Pipeline:
 
-	def __init__(self, 
-			  maps_dir='maps', 
-			  force_recalculate=False, 
-			  filter_region=None, 
-			  filter_cosmology=None, 
-			  filter_los=None, 
-			  do_remember_maps=True, 
-			  save_plots=False, 
-			  bng_resolution=100,
-			  three_sigma_mask=False
+	def __init__(
+			self,
+			maps_dir='maps',
+			force_recalculate=False,
+			filter_region=None,
+			filter_cosmology=None,
+			filter_los=None,
+			do_remember_maps=True,
+			save_plots=False,
+			bng_resolution=100,
+			three_sigma_mask=False,
+			lazy_load=False
 		):
 		self.maps_dir = maps_dir
 		self.recalculate = force_recalculate
@@ -49,6 +51,7 @@ class Pipeline:
 		self.save_plots = save_plots
 		self.bng_resolution = bng_resolution
 		self.three_sigma_mask = three_sigma_mask
+		self.lazy_load = lazy_load
 
 	def run_pipeline(self):
 		self.find_max_min_values_maps()
@@ -92,7 +95,7 @@ class Pipeline:
 					if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
 						continue
 
-					map = Map(map_path, three_sigma_mask=self.three_sigma_mask)
+					map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
 
 					curr_min = np.min(map.map[np.isfinite(map.map)])
 					curr_max = np.max(map.map[np.isfinite(map.map)])
@@ -175,14 +178,14 @@ class Pipeline:
 				for i, map_path in enumerate(tqdm(glob.glob(glob_str), leave=False)):
 					if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
 						continue
-					map = Map(map_path, three_sigma_mask=self.three_sigma_mask)
-					map.get_persistence()
+					map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
+					# map.get_persistence()
 					curr_cosm_maps.append(map)
 
 
 					# SLICS must be saved at LOS level
 					if not cosmoslics:
-						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps)
+						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load)
 						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
 						self.slics_pds.append(perdi)
 						self.slics_maps.append(map)
@@ -192,7 +195,7 @@ class Pipeline:
 						# cosmoslics_maps.append(map)
 
 				if len(curr_cosm_maps) > 0 and cosmoslics:
-					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps)
+					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
 					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
@@ -233,7 +236,7 @@ class Pipeline:
 			cosmoslics_bngvm_0.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=0')
 			cosmoslics_bngvm_1.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=1')
 
-		slics_pd = PersistenceDiagram(self.slics_maps)
+		slics_pd = PersistenceDiagram(self.slics_maps, lazy_load=self.lazy_load)
 		slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, regenerate=self.recalculate, resolution=self.bng_resolution)
 
 		self.dist_powers = []
