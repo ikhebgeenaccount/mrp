@@ -10,24 +10,8 @@ from utils import file_system
 
 class PersistenceDiagram:
 
-	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False):
-		if len(maps) > 0:
-			self.dimension_pairs = maps[0].dimension_pairs.copy()
-
-			self.maps = maps
-			self.maps_count = len(maps)
-
-			self.dimension_pairs_list = []
-
-			for map in maps[1:]:
-				self.dimension_pairs_list.append(map.dimension_pairs)
-				for dimension in self.dimension_pairs:
-					self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
-
-			for dim in self.dimension_pairs:
-				# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
-				self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
-
+	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False):
+		self.lazy_load = lazy_load
 		if cosmology is None:
 			self.cosmology = maps[0].cosmology
 			self.cosmology_id = maps[0].cosmology_id
@@ -38,13 +22,76 @@ class PersistenceDiagram:
 		self.cosm_parameters_full = cosmologies.get_cosmological_parameters(self.cosmology_id).to_dict('records')[0]
 		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology_id)[['id', 'Omega_m', 'S_8', 'h', 'w_0']].to_dict('records')[0]
 
+		self.handle_maps(maps, do_delete_maps)
+
+		self.product_loc = os.path.join('products', 'persistence_diagrams', self.cosmology)
+
+	def handle_maps(self, maps, do_delete_maps):
+		self.maps_count = len(maps)
+
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
 			if hasattr(maps[0], 'filename_without_folder'):
 				self.los = maps[0].filename_without_folder
 
+		# Recalculate when one of products don't exist
+		if not (
+				os.path.exists(os.path.join(self.product_loc, f'dimension_pairs_0.npy'))
+				and
+				os.path.exists(os.path.join(self.product_loc, f'dimension_pairs_1.npy'))
+			):
+
+			if len(maps) > 0:
+				self.dimension_pairs = maps[0].dimension_pairs.copy()
+				self.dimension_pairs_count = np.zeros(2)
+
+				self.maps = maps
+
+				self.dimension_pairs_list = []
+
+				for map in maps[1:]:
+					self.dimension_pairs_list.append(map.dimension_pairs)
+					for dimension in self.dimension_pairs:
+						self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
+
+				for dim in self.dimension_pairs:
+					# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
+					self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
+					self.dimension_pairs_count[dim] = self.dimension_pairs[dim].shape[1]
+
+					# Save dimension pairs to products
+					np.save(os.path.join(self.product_loc, f'dimension_pairs_{dim}.npy'), self.dimension_pairs[dim])
+
+				np.save(os.path.join(self.product_loc, 'dimension_pairs_count.npy'), self.dimension_pairs_count)
+
+			if self.lazy_load:
+				del self.dimension_pairs
+		elif not self.lazy_load:
+			self._load()
+
 		if do_delete_maps:
 			del self.maps
+
+	def _load(self, item):
+		if item == 'dimension_pairs':
+			self.dimension_pairs = {dim: np.load(os.path.join(self.product_loc, f'dimension_pairs_{dim}.npy')) for dim in [0, 1]}
+		elif item == 'dimension_pairs_count':
+			self.dimension_pairs_count = np.load(os.path.join(self.product_loc, 'dimension_pairs_count.npy'))
+
+	def __getattribute__(self, item):
+		# Just return if not lazy loading
+		if not self.lazy_load:
+			return object.__getattribute__(self, item)
+
+		if item == 'dimension_pairs':
+			self._load('dimension_pairs')
+			return self.dimension_pairs
+
+		if item == 'dimension_pairs_count':
+			self._load('dimension_pairs_count')
+			return self.dimension_pairs_count
+		# Every other item can just be returned
+		return object.__getattribute__(self, item)
 
 	def plot(self, close=True, plot_args=None, ax=None):
 		if plot_args is None:
@@ -174,6 +221,9 @@ class PersistenceDiagram:
 						os.path.join('plots', 'betti_number_grids', self.cosmology), 
 						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
 					)
+
+			if self.lazy_load:
+				del self.dimension_pairs
 		
 		return self.betti_numbers_grids
 
