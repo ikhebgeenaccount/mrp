@@ -55,10 +55,10 @@ class Map:
 		elif filename is None:
 			self.map = map
 
-	def __getattribute__(self, item):
+	def __getattr__(self, item):
 		# Just return if not lazy loading
 		if not self.lazy_load:
-			return object.__getattribute__(self, item)
+			return super().__getattribute__(item)
 		# If map is asked, we need to load first
 		if item == 'map':
 			self._load()
@@ -67,7 +67,7 @@ class Map:
 			self.get_persistence()
 			return self.dimension_pairs
 		# Every other item can just be returned
-		return object.__getattribute__(self, item)
+		return super().__getattribute__(item)
 
 	def _load(self):
 		self.map = np.load(self.filename)

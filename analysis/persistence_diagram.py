@@ -12,6 +12,7 @@ class PersistenceDiagram:
 
 	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False):
 		self.lazy_load = lazy_load
+
 		if cosmology is None:
 			self.cosmology = maps[0].cosmology
 			self.cosmology_id = maps[0].cosmology_id
@@ -19,15 +20,18 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
+		self.product_loc = os.path.join('products', 'persistence_diagrams', self.cosmology)
+
+		file_system.check_folder_exists(self.product_loc)
+
 		self.cosm_parameters_full = cosmologies.get_cosmological_parameters(self.cosmology_id).to_dict('records')[0]
 		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology_id)[['id', 'Omega_m', 'S_8', 'h', 'w_0']].to_dict('records')[0]
 
 		self.handle_maps(maps, do_delete_maps)
 
-		self.product_loc = os.path.join('products', 'persistence_diagrams', self.cosmology)
-
 	def handle_maps(self, maps, do_delete_maps):
 		self.maps_count = len(maps)
+		self.maps = maps
 
 		if len(maps) == 1:
 			# Save the line of sight discriminator if we only have one map
@@ -36,16 +40,14 @@ class PersistenceDiagram:
 
 		# Recalculate when one of products don't exist
 		if not (
-				os.path.exists(os.path.join(self.product_loc, f'dimension_pairs_0.npy'))
+				os.path.exists(os.path.join(self.product_loc, 'dimension_pairs_0.npy'))
 				and
-				os.path.exists(os.path.join(self.product_loc, f'dimension_pairs_1.npy'))
+				os.path.exists(os.path.join(self.product_loc, 'dimension_pairs_1.npy'))
 			):
 
 			if len(maps) > 0:
 				self.dimension_pairs = maps[0].dimension_pairs.copy()
-				self.dimension_pairs_count = np.zeros(2)
-
-				self.maps = maps
+				self.dimension_pairs_count = np.zeros(2)				
 
 				self.dimension_pairs_list = []
 
@@ -53,6 +55,8 @@ class PersistenceDiagram:
 					self.dimension_pairs_list.append(map.dimension_pairs)
 					for dimension in self.dimension_pairs:
 						self.dimension_pairs[dimension] = np.append(self.dimension_pairs[dimension], map.dimension_pairs[dimension], axis=0)
+				
+				del self.dimension_pairs['all']
 
 				for dim in self.dimension_pairs:
 					# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
@@ -78,10 +82,10 @@ class PersistenceDiagram:
 		elif item == 'dimension_pairs_count':
 			self.dimension_pairs_count = np.load(os.path.join(self.product_loc, 'dimension_pairs_count.npy'))
 
-	def __getattribute__(self, item):
+	def __getattr__(self, item):
 		# Just return if not lazy loading
 		if not self.lazy_load:
-			return object.__getattribute__(self, item)
+			return super().__getattribute__(item)
 
 		if item == 'dimension_pairs':
 			self._load('dimension_pairs')
@@ -91,7 +95,7 @@ class PersistenceDiagram:
 			self._load('dimension_pairs_count')
 			return self.dimension_pairs_count
 		# Every other item can just be returned
-		return object.__getattribute__(self, item)
+		return super().__getattribute__(item)
 
 	def plot(self, close=True, plot_args=None, ax=None):
 		if plot_args is None:

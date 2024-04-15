@@ -23,7 +23,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		self.minimum_feature_count = minimum_feature_count
 
-		feature_counts = [[len(cpd.dimension_pairs[dim]) * cpd.betti_numbers_grids[0]._transform_map() for cpd in cosmoslics_pds] for dim in [0, 1]]
+		feature_counts = [[cpd.dimension_pairs_count[dim] * cpd.betti_numbers_grids[0]._transform_map() for cpd in cosmoslics_pds] for dim in [0, 1]]
 		self.max_feature_count = np.max(feature_counts, axis=1)
 
 		# Find first non-nan value
