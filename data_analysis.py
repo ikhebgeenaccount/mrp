@@ -37,8 +37,8 @@ from utils.file_system import check_folder_exists
 slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
-def read_maps(filter_region=None):
-	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=False, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True, lazy_load=True)
+def read_maps(filter_region=None, force_recalculate=False):
+	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=force_recalculate, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True, lazy_load=True)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
 
@@ -252,6 +252,7 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--load', action='store_true', help='Flag to set to load from pickle or not. Passed flag means load pickle object')
 	parser.add_argument('-p', '--pickle-path', type=str, help='Path to Emulator pickle object', default='emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
+	parser.add_argument('-r', '--recalculate', action='store_true', help='Force Pipeline to recalculate PersistenceDiagrams and everything else')
 	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=1000)
 	parser.add_argument('--burn-in-steps', type=int, default=2500, help='Number of burn in steps')
 	parser.add_argument('--n-steps', type=int, default=25000, help='Number of MCMC steps (not including burn in)')
@@ -268,7 +269,7 @@ if __name__ == '__main__':
 
 	if not args.load:
 		print('Loading data')
-		slics_pds, cosmoslics_pds, dist_powers = read_maps()
+		slics_pds, cosmoslics_pds, dist_powers = read_maps(force_recalculate=args.recalculate)
 		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1)
 		emu = create_emulator(comp)
 	else:
