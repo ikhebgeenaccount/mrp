@@ -56,6 +56,8 @@ class Map:
 			self.map = map
 
 	def __getattr__(self, item):
+		if item == 'lazy_load':
+			return super().__getattribute__('lazy_load')
 		# Just return if not lazy loading
 		if not self.lazy_load:
 			return super().__getattribute__(item)

@@ -71,7 +71,7 @@ class Pipeline:
 	def find_max_min_values_maps(self, save_all_values=False, save_maps=False):		
 		print('Determining max and min values in maps...')
 
-		if not self.recalculate and os.path.exists(os.path.join(self.maps_dir, 'extreme_values.json')):
+		if os.path.exists(os.path.join(self.maps_dir, 'extreme_values.json')): # and not self.recalculate:
 			print('Found file with saved values, reading...')
 			with open(os.path.join(self.maps_dir, 'extreme_values.json')) as file:
 				data_range_read = json.loads(file.readline())
@@ -185,8 +185,8 @@ class Pipeline:
 
 					# SLICS must be saved at LOS level
 					if not cosmoslics:
-						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load)
-						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
+						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
+						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
 						self.slics_pds.append(perdi)
 						self.slics_maps.append(map)
 					else:
@@ -195,10 +195,10 @@ class Pipeline:
 						# cosmoslics_maps.append(map)
 
 				if len(curr_cosm_maps) > 0 and cosmoslics:
-					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load)
+					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
-					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, regenerate=self.recalculate, save_plots=self.save_plots)
+					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
 
 					if self.save_plots:
 						perdi.plot()
@@ -236,8 +236,8 @@ class Pipeline:
 			cosmoslics_bngvm_0.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=0')
 			cosmoslics_bngvm_1.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=1')
 
-		slics_pd = PersistenceDiagram(self.slics_maps, lazy_load=self.lazy_load)
-		slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, regenerate=self.recalculate, resolution=self.bng_resolution)
+		slics_pd = PersistenceDiagram(self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
+		slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
 
 		self.dist_powers = []
 

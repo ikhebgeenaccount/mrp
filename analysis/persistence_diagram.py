@@ -10,8 +10,9 @@ from utils import file_system
 
 class PersistenceDiagram:
 
-	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False):
+	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False, recalculate=False):
 		self.lazy_load = lazy_load
+		self.recalculate = recalculate
 
 		if cosmology is None:
 			self.cosmology = maps[0].cosmology
@@ -43,7 +44,7 @@ class PersistenceDiagram:
 				os.path.exists(os.path.join(self.product_loc, 'dimension_pairs_0.npy'))
 				and
 				os.path.exists(os.path.join(self.product_loc, 'dimension_pairs_1.npy'))
-			):
+			) or self.recalculate:
 
 			if len(maps) > 0:
 				self.dimension_pairs = maps[0].dimension_pairs.copy()
@@ -61,7 +62,7 @@ class PersistenceDiagram:
 				for dim in self.dimension_pairs:
 					# np.min collapses the isfinite check to cover the pair of values instead of only one coordinate
 					self.dimension_pairs[dim] = self.dimension_pairs[dim][np.min(np.isfinite(self.dimension_pairs[dim]), axis=1)]
-					self.dimension_pairs_count[dim] = self.dimension_pairs[dim].shape[1]
+					self.dimension_pairs_count[dim] = self.dimension_pairs[dim].shape[0]
 
 					# Save dimension pairs to products
 					np.save(os.path.join(self.product_loc, f'dimension_pairs_{dim}.npy'), self.dimension_pairs[dim])
@@ -83,6 +84,8 @@ class PersistenceDiagram:
 			self.dimension_pairs_count = np.load(os.path.join(self.product_loc, 'dimension_pairs_count.npy'))
 
 	def __getattr__(self, item):
+		if item == 'lazy_load':
+			return super().__getattribute__('lazy_load')
 		# Just return if not lazy loading
 		if not self.lazy_load:
 			return super().__getattribute__(item)
@@ -171,11 +174,11 @@ class PersistenceDiagram:
 
 		return np.sum(birth_side * death_side, axis=2)
 	
-	def generate_betti_numbers_grids(self, resolution=100, regenerate=False, data_ranges_dim=None, save_plots=False):
+	def generate_betti_numbers_grids(self, resolution=100, data_ranges_dim=None, save_plots=False):
 		
 		self.betti_numbers_grids = {}
 
-		if not regenerate and os.path.exists(os.path.join('products', 'betti_number_grids', self.cosmology)):
+		if not self.recalculate and os.path.exists(os.path.join('products', 'betti_number_grids', self.cosmology)):
 			self.betti_numbers_grids[0] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 0)
 			self.betti_numbers_grids[1] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 1)
 			return self.betti_numbers_grids
@@ -232,7 +235,7 @@ class PersistenceDiagram:
 		return self.betti_numbers_grids
 
 
-	def generate_heatmaps(self, resolution=1000, gaussian_kernel_size_in_sigma=3, regenerate=False):
+	def generate_heatmaps(self, resolution=1000, gaussian_kernel_size_in_sigma=3):
 		"""
 		Generates the heatmaps corresponding to the birth and death times given calculated by get_persistence.
 		The heatmap is a convolution of the birth and death times (scatterplot) with a 2D Gaussian.
@@ -243,7 +246,7 @@ class PersistenceDiagram:
 
 		self.heatmaps = {}
 
-		if not regenerate and os.path.exists(os.path.join('products', 'heatmaps', self.cosmology)):
+		if not self.recalculate and os.path.exists(os.path.join('products', 'heatmaps', self.cosmology)):
 			self.heatmaps[0] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 0)
 			self.heatmaps[1] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 1)
 			return self.heatmaps
