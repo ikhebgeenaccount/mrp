@@ -13,7 +13,7 @@ from analysis import cosmologies
 
 class Emulator:
 
-	def __init__(self, regressor_type, training_set=None, compressor: Compressor=None, **regressor_args):
+	def __init__(self, regressor_type, training_set=None, compressor: Compressor=None, plots_dir='plots', **regressor_args):
 		if training_set is not None:
 			self.compressor = None
 			self.training_set = training_set
@@ -34,7 +34,7 @@ class Emulator:
 
 		self.data_vector_length = self.training_set['target'].shape[1]
 
-		self.plots_dir = 'plots'
+		self.plots_dir = plots_dir
 
 	def fit(self):
 		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])

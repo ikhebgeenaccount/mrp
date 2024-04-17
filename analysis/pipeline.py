@@ -32,6 +32,8 @@ class Pipeline:
 	def __init__(
 			self,
 			maps_dir='maps',
+			plots_dir='plots', 
+			products_dir='products', 
 			force_recalculate=False,
 			filter_region=None,
 			filter_cosmology=None,
@@ -43,6 +45,8 @@ class Pipeline:
 			lazy_load=False
 		):
 		self.maps_dir = maps_dir
+		self.plots_dir = plots_dir
+		self.products_dir = products_dir
 		self.recalculate = force_recalculate
 		self.filter_region = filter_region if filter_region is not None else '*'
 		self.filter_cosmology = filter_cosmology
@@ -185,7 +189,10 @@ class Pipeline:
 
 					# SLICS must be saved at LOS level
 					if not cosmoslics:
-						perdi = PersistenceDiagram([map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
+						perdi = PersistenceDiagram(
+							[map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+							plots_dir=self.plots_dir, products_dir=self.products_dir
+						)
 						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
 						self.slics_pds.append(perdi)
 						self.slics_maps.append(map)
@@ -195,7 +202,10 @@ class Pipeline:
 						# cosmoslics_maps.append(map)
 
 				if len(curr_cosm_maps) > 0 and cosmoslics:
-					perdi = PersistenceDiagram(curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
+					perdi = PersistenceDiagram(
+						curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+						plots_dir=self.plots_dir, products_dir=self.products_dir
+					)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
 					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
@@ -231,26 +241,29 @@ class Pipeline:
 		cosmoslics_bngvm_1 = BettiNumbersGridVarianceMap(cosmoslics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
 
 		if self.save_plots:
-			slics_bngvm_0.save_figure(os.path.join('plots', 'slics'), title='SLICS variance, dim=0')
-			slics_bngvm_1.save_figure(os.path.join('plots', 'slics'), title='SLICS variance, dim=1')
-			cosmoslics_bngvm_0.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=0')
-			cosmoslics_bngvm_1.save_figure(os.path.join('plots', 'cosmoslics'), title='cosmoSLICS variance, dim=1')
+			slics_bngvm_0.save_figure(os.path.join(self.plots_dir, 'slics'), title='SLICS variance, dim=0')
+			slics_bngvm_1.save_figure(os.path.join(self.plots_dir, 'slics'), title='SLICS variance, dim=1')
+			cosmoslics_bngvm_0.save_figure(os.path.join(self.plots_dir, 'cosmoslics'), title='cosmoSLICS variance, dim=0')
+			cosmoslics_bngvm_1.save_figure(os.path.join(self.plots_dir, 'cosmoslics'), title='cosmoSLICS variance, dim=1')
 
-		slics_pd = PersistenceDiagram(self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate)
+		slics_pd = PersistenceDiagram(
+			self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+			plots_dir=self.plots_dir, products_dir=self.products_dir
+		)
 		slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
 
 		self.dist_powers = []
 
 		for dim in [0, 1]:
 			slics_var_map = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-			slics_var_map.save(os.path.join('products', 'bng_variance', 'slics'))
+			slics_var_map.save(os.path.join(self.products_dir, 'bng_variance', 'slics'))
 
 			dist_power = PixelDistinguishingPowerMap([cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds], slics_pd.betti_numbers_grids[dim], slics_var_map, dimension=dim)
-			dist_power.save(os.path.join('products', 'pixel_distinguishing_power'))
+			dist_power.save(os.path.join(self.products_dir, 'pixel_distinguishing_power'))
 			
 			if self.save_plots:
-				slics_var_map.save_figure(os.path.join('plots', 'bng_variance', 'slics'))
-				dist_power.save_figure(os.path.join('plots', 'pixel_distinguishing_power'))
+				slics_var_map.save_figure(os.path.join(self.plots_dir, 'bng_variance', 'slics'))
+				dist_power.save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'))
 
 			self.dist_powers.append(dist_power)
 

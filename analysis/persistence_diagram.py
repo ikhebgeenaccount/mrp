@@ -10,7 +10,7 @@ from utils import file_system
 
 class PersistenceDiagram:
 
-	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False, recalculate=False):
+	def __init__(self, maps: List[Map], cosmology=None, do_delete_maps=False, lazy_load=False, recalculate=False, plots_dir='plots', products_dir='products'):
 		self.lazy_load = lazy_load
 		self.recalculate = recalculate
 
@@ -21,7 +21,8 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
-		self.product_loc = os.path.join('products', 'persistence_diagrams', self.cosmology)
+		self.plots_dir = plots_dir
+		self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
 
 		file_system.check_folder_exists(self.product_loc)
 
@@ -127,8 +128,8 @@ class PersistenceDiagram:
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
 		ax.set_title(self.cosmology)
-		file_system.check_folder_exists(os.path.join('plots', 'persistence_diagrams'))
-		fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{self.cosmology}.png'))
+		file_system.check_folder_exists(os.path.join(self.plots_dir, 'persistence_diagrams'))
+		fig.savefig(os.path.join(self.plots_dir, 'persistence_diagrams', f'{self.cosmology}.png'))
 
 		if not new_ax:
 			return
@@ -216,7 +217,7 @@ class PersistenceDiagram:
 
 				if save_plots:
 					self.betti_numbers_grids[dimension].save_figure(
-						os.path.join('plots', 'betti_number_grids', self.cosmology, self.los), 
+						os.path.join(self.plots_dir, 'betti_number_grids', self.cosmology, self.los), 
 						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
 					)
 
@@ -225,7 +226,7 @@ class PersistenceDiagram:
 
 				if save_plots:
 					self.betti_numbers_grids[dimension].save_figure(
-						os.path.join('plots', 'betti_number_grids', self.cosmology), 
+						os.path.join(self.plots_dir, 'betti_number_grids', self.cosmology), 
 						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
 					)
 
@@ -291,11 +292,11 @@ class PersistenceDiagram:
 			if hasattr(self, 'los'):
 				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology, self.los))
 
-				self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology, self.los))#, scatter_points=(x, y))
+				self.heatmaps[dimension].save_figure(os.path.join(self.plots_dir, 'heatmaps', self.cosmology, self.los))#, scatter_points=(x, y))
 			else:
 				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology))
 
-				self.heatmaps[dimension].save_figure(os.path.join('plots', 'heatmaps', self.cosmology))#, scatter_points=(x, y))
+				self.heatmaps[dimension].save_figure(os.path.join(self.plots_dir, 'heatmaps', self.cosmology))#, scatter_points=(x, y))
 		
 		return self.heatmaps
 	
