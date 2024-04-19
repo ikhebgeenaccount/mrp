@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from analysis.map import Map
-from analysis.persistence_diagram import PersistenceDiagram
+from analysis.persistence_diagram import BettiNumbersGrid, PersistenceDiagram
 from analysis.persistence_diagram import BettiNumbersGridVarianceMap, PixelDistinguishingPowerMap
 
 
@@ -75,6 +75,12 @@ class Pipeline:
 	def find_max_min_values_maps(self, save_all_values=False, save_maps=False):		
 		print('Determining max and min values in maps...')
 
+		self.data_range = {
+			dim : [-.05, 0.05] for dim in [0, 1]
+		}
+
+		return self.data_range
+
 		if os.path.exists(os.path.join(self.maps_dir, 'extreme_values.json')): # and not self.recalculate:
 			print('Found file with saved values, reading...')
 			with open(os.path.join(self.maps_dir, 'extreme_values.json')) as file:
@@ -126,7 +132,7 @@ class Pipeline:
 		print('max=', vals['max'])
 
 		self.data_range = {
-			dim : [vals['min'], vals['max']] for dim in [0, 1]
+			dim : [-.05, 0.05] for dim in [0, 1]
 		}
 
 		with open(os.path.join(self.maps_dir, 'extreme_values.json'), 'w') as file:
@@ -163,7 +169,7 @@ class Pipeline:
 		self.cosmoslics_pds = []
 		# cosmoslics_uniq_pds = []
 
-		self.slics_maps = []
+		# self.slics_maps = []
 		# cosmoslics_maps = []
 
 		do_delete_maps = not self.do_remember_maps
@@ -179,13 +185,11 @@ class Pipeline:
 
 				glob_str = self._get_glob_str_file(dir)
 
-				for i, map_path in enumerate(tqdm(glob.glob(glob_str), leave=False)):
+				for i, map_path in enumerate(glob.glob(glob_str)):
 					if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
 						continue
 					map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
 					# map.get_persistence()
-					curr_cosm_maps.append(map)
-
 
 					# SLICS must be saved at LOS level
 					if not cosmoslics:
@@ -193,11 +197,11 @@ class Pipeline:
 							[map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
 							plots_dir=self.plots_dir, products_dir=self.products_dir
 						)
-						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
+						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=False)
 						self.slics_pds.append(perdi)
-						self.slics_maps.append(map)
+						# self.slics_maps.append(map)
 					else:
-						pass
+						curr_cosm_maps.append(map)
 						# cosmoslics_uniq_pds.append(perdi)
 						# cosmoslics_maps.append(map)
 
@@ -208,10 +212,10 @@ class Pipeline:
 					)
 					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
 					# pd.add_average_lines()
-					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=self.save_plots)
+					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=False)
 
-					if self.save_plots:
-						perdi.plot()
+					# if self.save_plots:
+					# 	perdi.plot()
 
 					# cosmoSLICS must be saved at cosmology level
 					if cosmoslics:
@@ -228,46 +232,41 @@ class Pipeline:
 			dim: [cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds] for dim in [0, 1]
 		}
 
-		dim = 0
-		slics_bngvm_0 = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-		
-		dim = 1
-		slics_bngvm_1 = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-
-		dim = 0
-		cosmoslics_bngvm_0 = BettiNumbersGridVarianceMap(cosmoslics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-
-		dim = 1
-		cosmoslics_bngvm_1 = BettiNumbersGridVarianceMap(cosmoslics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-
-		if self.save_plots:
-			slics_bngvm_0.save_figure(os.path.join(self.plots_dir, 'slics'), title='SLICS variance, dim=0')
-			slics_bngvm_1.save_figure(os.path.join(self.plots_dir, 'slics'), title='SLICS variance, dim=1')
-			cosmoslics_bngvm_0.save_figure(os.path.join(self.plots_dir, 'cosmoslics'), title='cosmoSLICS variance, dim=0')
-			cosmoslics_bngvm_1.save_figure(os.path.join(self.plots_dir, 'cosmoslics'), title='cosmoSLICS variance, dim=1')
-
-		slics_pd = PersistenceDiagram(
-			self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
-			plots_dir=self.plots_dir, products_dir=self.products_dir
-		)
-		slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
+		# slics_pd = PersistenceDiagram(
+		# 	self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+		# 	plots_dir=self.plots_dir, products_dir=self.products_dir
+		# )
+		# slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
+		avg_slics_bng = {
+			dim: BettiNumbersGrid(np.mean([bng.map for bng in slics_bngs[dim]], axis=0), slics_bngs[dim][0].x_range, slics_bngs[dim][0].y_range, dim) for dim in [0, 1]
+		}
 
 		self.dist_powers = []
 
-		for dim in [0, 1]:
-			slics_var_map = BettiNumbersGridVarianceMap(slics_bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-			slics_var_map.save(os.path.join(self.products_dir, 'bng_variance', 'slics'))
+		for i, bngs in enumerate([slics_bngs, cosmoslics_bngs]):
+			t = 'SLICS' if i == 0 else 'cosmoSLICS'
+			for dim in [0, 1]:
+				# Calculate Variance map
+				var_map = BettiNumbersGridVarianceMap(bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
+				if t == 'SLICS':
+					# SLICS variance needs to be divided by sqrt(n_cosmoSLICS_realizations)
+					var_map.map = var_map.map / np.sqrt(50. * 18.)
+				var_map.save(os.path.join(self.products_dir, 'bng_variance', t))
 
-			dist_power = PixelDistinguishingPowerMap([cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds], slics_pd.betti_numbers_grids[dim], slics_var_map, dimension=dim)
-			dist_power.save(os.path.join(self.products_dir, 'pixel_distinguishing_power'))
-			
-			if self.save_plots:
-				slics_var_map.save_figure(os.path.join(self.plots_dir, 'bng_variance', 'slics'))
-				dist_power.save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'))
+				if self.save_plots:
+					var_map.save_figure(os.path.join(self.plots_dir, 'bng_variance', t), title=f'{t} variance, dim={dim}')
 
-			self.dist_powers.append(dist_power)
+				# Calculate pixel distinguishing power map if SLICS
+				if t == 'SLICS':
+					dist_power = PixelDistinguishingPowerMap([cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds], avg_slics_bng[dim], var_map, dimension=dim)
+					dist_power.save(os.path.join(self.products_dir, 'pixel_distinguishing_power'))
+				
+					if self.save_plots:
+						dist_power.save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'))
 
-		del slics_pd
-		del self.slics_maps
+					self.dist_powers.append(dist_power)
+
+		# del slics_pd
+		# del self.slics_maps
 
 		return self.dist_powers

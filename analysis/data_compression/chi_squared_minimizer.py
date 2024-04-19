@@ -16,8 +16,6 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		self.dist_powers = dist_powers
 		self.dist_powers_merged = np.array([dist_powers[0]._transform_map(), dist_powers[1]._transform_map()])
 
-		print(self.dist_powers_merged.shape)
-
 		self.chisq_increase = chisq_increase
 		self.prev_chisq = 0.
 

@@ -22,11 +22,8 @@ class GrowingVectorCompressor(IndexCompressor):
 		self.max_data_vector_length = max_data_vector_length
 
 		self.minimum_feature_count = minimum_feature_count
-		print(list([cpd.dimension_pairs_count[dim] for cpd in cosmoslics_pds] for dim in [0, 1]))
 		feature_counts = [[cpd.dimension_pairs_count[dim] * cpd.betti_numbers_grids[0]._transform_map() for cpd in cosmoslics_pds] for dim in [0, 1]]
 		self.max_feature_count = np.max(feature_counts, axis=1)
-
-		print(self.max_feature_count)
 
 		# Find first non-nan value
 		for i in range(len(self.pixel_scores_argsort)):
@@ -43,7 +40,7 @@ class GrowingVectorCompressor(IndexCompressor):
 		super().__init__(cosmoslics_pds, slics_pds, indices=[])
 
 	def acceptance_func(self, compressor: Compressor):
-		raise NotImplementedError('Subclasses of VectorGrowthCompressor must implement acceptance_func')
+		raise NotImplementedError('Subclasses of GrowingVectorCompressor must implement acceptance_func')
 
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
 		if self.map_indices is not None:
@@ -51,8 +48,6 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		# Build set of indices to test
 		test_indices = self.pixel_scores_argsort[self.start_index:]
-
-		print(test_indices)
 
 		self.map_indices = []
 
@@ -101,9 +96,6 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		# Set indices to be map_indices
 		self.set_indices(self.map_indices)
-		print(self.map_indices)
-		print(self.indices)
-		print(self.indices_t)
 		tset = super()._build_training_set(pds)
 		tset['name'] = 'chi_sq_minimizer'
 		return tset

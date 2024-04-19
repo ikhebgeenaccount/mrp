@@ -21,8 +21,17 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
-		self.plots_dir = plots_dir
-		self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
+		if len(maps) == 1:
+			# Save the line of sight discriminator if we only have one map
+			if hasattr(maps[0], 'filename_without_folder'):
+				self.los = maps[0].filename_without_folder
+				self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology, self.los)
+				self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology, self.los)
+			else:
+				raise ValueError('No los discriminator found')
+		else:		
+			self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
+			self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology)
 
 		file_system.check_folder_exists(self.product_loc)
 
@@ -34,11 +43,6 @@ class PersistenceDiagram:
 	def handle_maps(self, maps, do_delete_maps):
 		self.maps_count = len(maps)
 		self.maps = maps
-
-		if len(maps) == 1:
-			# Save the line of sight discriminator if we only have one map
-			if hasattr(maps[0], 'filename_without_folder'):
-				self.los = maps[0].filename_without_folder
 
 		# Recalculate when one of products don't exist
 		if not (
@@ -128,8 +132,8 @@ class PersistenceDiagram:
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
 		ax.set_title(self.cosmology)
-		file_system.check_folder_exists(os.path.join(self.plots_dir, 'persistence_diagrams'))
-		fig.savefig(os.path.join(self.plots_dir, 'persistence_diagrams', f'{self.cosmology}.png'))
+		file_system.check_folder_exists(os.path.join(self.plot_loc))
+		fig.savefig(os.path.join(self.plot_loc, f'{self.cosmology}.png'))
 
 		if not new_ax:
 			return
@@ -179,10 +183,11 @@ class PersistenceDiagram:
 		
 		self.betti_numbers_grids = {}
 
-		if not self.recalculate and os.path.exists(os.path.join('products', 'betti_number_grids', self.cosmology)):
-			self.betti_numbers_grids[0] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 0)
-			self.betti_numbers_grids[1] = load_betti_numbers_grid(os.path.join('products', 'betti_number_grids', self.cosmology), 1)
-			return self.betti_numbers_grids
+		if not self.recalculate:
+			if os.path.exists(os.path.join(self.product_loc, 'betti_number_grids')):
+				self.betti_numbers_grids[0] = load_betti_numbers_grid(os.path.join(self.product_loc, 'betti_number_grids'), 0)
+				self.betti_numbers_grids[1] = load_betti_numbers_grid(os.path.join(self.product_loc, 'betti_number_grids'), 1)
+				return self.betti_numbers_grids
 
 		for dimension in self.dimension_pairs:
 			if dimension == 'all':
@@ -212,23 +217,13 @@ class PersistenceDiagram:
 				dimension=dimension
 			)
 			
-			if hasattr(self, 'los'):
-				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology, self.los))
+			self.betti_numbers_grids[dimension].save(os.path.join(self.product_loc, 'betti_numbers_grid'))
 
-				if save_plots:
-					self.betti_numbers_grids[dimension].save_figure(
-						os.path.join(self.plots_dir, 'betti_number_grids', self.cosmology, self.los), 
-						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
-					)
-
-			else:
-				self.betti_numbers_grids[dimension].save(os.path.join('products', 'betti_numbers_grid', self.cosmology))
-
-				if save_plots:
-					self.betti_numbers_grids[dimension].save_figure(
-						os.path.join(self.plots_dir, 'betti_number_grids', self.cosmology), 
-						scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
-					)
+			if save_plots:
+				self.betti_numbers_grids[dimension].save_figure(
+					os.path.join(self.plot_loc, 'betti_number_grids'), 
+					scatter_points=(self.dimension_pairs[dimension][:, 0], self.dimension_pairs[dimension][:, 1])
+				)
 
 			if self.lazy_load:
 				del self.dimension_pairs
@@ -247,9 +242,9 @@ class PersistenceDiagram:
 
 		self.heatmaps = {}
 
-		if not self.recalculate and os.path.exists(os.path.join('products', 'heatmaps', self.cosmology)):
-			self.heatmaps[0] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 0)
-			self.heatmaps[1] = load_heatmap(os.path.join('products', 'heatmaps', self.cosmology), 1)
+		if not self.recalculate and os.path.exists(os.path.join(self.product_loc, 'heatmaps')):
+			self.heatmaps[0] = load_heatmap(os.path.join(self.product_loc, 'heatmaps'), 0)
+			self.heatmaps[1] = load_heatmap(os.path.join(self.product_loc, 'heatmaps'), 1)
 			return self.heatmaps
 
 		# convolve2d takes two arrays as input
@@ -289,22 +284,11 @@ class PersistenceDiagram:
 		
 			self.heatmaps[dimension] = Heatmap(heatmap, data_range, data_range, dimension)
 
-			if hasattr(self, 'los'):
-				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology, self.los))
+			self.heatmaps[dimension].save(os.path.join(self.product_loc, 'heatmaps'))
 
-				self.heatmaps[dimension].save_figure(os.path.join(self.plots_dir, 'heatmaps', self.cosmology, self.los))#, scatter_points=(x, y))
-			else:
-				self.heatmaps[dimension].save(os.path.join('products', 'heatmaps', self.cosmology))
-
-				self.heatmaps[dimension].save_figure(os.path.join(self.plots_dir, 'heatmaps', self.cosmology))#, scatter_points=(x, y))
+			self.heatmaps[dimension].save_figure(os.path.join(self.plot_loc, 'heatmaps'))#, scatter_points=(x, y))
 		
 		return self.heatmaps
-	
-	def save_fig(self, figure, base_path, file_name):
-		if hasattr(self, 'los'):
-			figure.savefig(os.path.join(base_path, self.los, file_name))
-		else:
-			figure.savefig(os.path.join(base_path, file_name))
 
 
 def load_heatmap(path, dimension):
@@ -427,7 +411,7 @@ class BettiNumbersGridVarianceMap(BaseRangedMap):
 		grids = []
 		for bng in betti_numbers_grids:
 			grids.append(bng.map)
-
+		
 		self.map = np.std(grids, axis=0)
 
 	def _transform_map(self):

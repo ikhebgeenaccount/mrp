@@ -19,9 +19,6 @@ class IndexCompressor(Compressor):
 		self.indices_t = self.indices.T
 
 	def _build_training_set(self, pds: List[PersistenceDiagram]):
-
-		print(self.indices)
-		print(self.indices_t)
 		training_set = {
 			'name': 'index',
 			'input': [],

@@ -51,6 +51,7 @@ class Compressor:
 			self.slics_covariance_matrix = np.array([[np.var(self.slics_training_set['target'].T)]])
 		else:
 			self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
+		self.slics_covariance_matrix = self.slics_covariance_matrix / np.sqrt(50. * 18.)
 
 	def _calculate_average_data_vector(self):
 		if self.data_vector_length == 1:
