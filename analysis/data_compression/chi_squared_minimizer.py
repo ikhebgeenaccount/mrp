@@ -26,6 +26,7 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)	
 
 	def acceptance_func(self, compressor: IndexCompressor):
+		self.debug(f'{self.prev_chisq:.5f}')
 		# Calculate chi squared value
 		sub = (compressor.avg_slics_data_vector - compressor.cosmoslics_training_set['target'])
 		intermed = np.matmul(sub, np.linalg.inv(compressor.slics_covariance_matrix))

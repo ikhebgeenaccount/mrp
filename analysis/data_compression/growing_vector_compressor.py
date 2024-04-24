@@ -25,11 +25,15 @@ class GrowingVectorCompressor(IndexCompressor):
 		feature_counts = [[cpd.dimension_pairs_count[dim] * cpd.betti_numbers_grids[0]._transform_map() for cpd in cosmoslics_pds] for dim in [0, 1]]
 		self.max_feature_count = np.max(feature_counts, axis=1)
 
+		# Filter pixel coordinates based on minimum_feature_count
+		self.pixel_scores_argsort = self.pixel_scores_argsort[self.max_feature_count.flatten()[self.pixel_scores_argsort] >= self.minimum_feature_count]
+
 		# Find first non-nan value
 		for i in range(len(self.pixel_scores_argsort)):
 			if np.isfinite(self.pixel_scores[np.unravel_index(self.pixel_scores_argsort[i], self.pixel_scores_shape)]):
 				break
 		self.start_index = i
+		print('First index', np.unravel_index(self.pixel_scores_argsort[self.start_index], self.pixel_scores_shape))
 
 		self.min_crosscorr_det = minimum_crosscorr_det
 
@@ -54,6 +58,9 @@ class GrowingVectorCompressor(IndexCompressor):
 		last_i_accepted = 0
 
 		for i, new_index in enumerate(test_indices):
+			if i % 100 == 1:
+				print(f'Analyzing {i}st index of {len(test_indices)}')
+				
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
 			temp_map_indices = self.map_indices + [new_unrav]
 
@@ -62,6 +69,7 @@ class GrowingVectorCompressor(IndexCompressor):
 			# Check if we have > min_count features in this index for at least one cosmoSLICS
 			if self.max_feature_count[new_unrav] < self.minimum_feature_count:
 				self.debug('Minimum feature count not reached')
+				self.debug('Shouldnt see this')
 				continue
 			
 			try:
@@ -72,6 +80,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 				temp_compressor._build_crosscorr_matrix()
 				if np.linalg.det(temp_compressor.slics_crosscorr_matrix) < self.min_crosscorr_det:
+					self.debug('Minimum correlation det not reached')
 					continue
 
 				if self.acceptance_func(temp_compressor):
@@ -97,5 +106,5 @@ class GrowingVectorCompressor(IndexCompressor):
 		# Set indices to be map_indices
 		self.set_indices(self.map_indices)
 		tset = super()._build_training_set(pds)
-		tset['name'] = 'chi_sq_minimizer'
+		tset['name'] = 'growing_vector_comp'
 		return tset

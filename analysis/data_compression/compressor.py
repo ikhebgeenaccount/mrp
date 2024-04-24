@@ -119,13 +119,13 @@ class Compressor:
 			out = odr_.run()
 			out.pprint()
 
-	def _plot_matrix(self, matrix, title='', origin=None, save_name=None):
+	def _plot_matrix(self, matrix, title='', origin=None, save_name=None, save=True):
 		fig, ax = plt.subplots()
 		imax = ax.imshow(matrix, origin=origin)
 		fig.colorbar(imax)
 		ax.set_title(title)
 
-		if save_name is not None:
+		if save_name is not None and save:
 			self._save_plot(fig, save_name)
 		return fig, ax
 	
@@ -133,13 +133,13 @@ class Compressor:
 		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.png')
 		plt.close(fig)
 
-	def plot_covariance_matrix(self):
-		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix')
+	def plot_covariance_matrix(self, save=True):
+		self._plot_matrix(self.slics_covariance_matrix, title='SLICS covariance matrix', save_name='slics_cov_matrix', save=save)
 		# self._plot_cov_matrix(self.cosmoslics_covariance_matrix, 'cosmoSLICS covariance matrix')
 	
-	def plot_correlation_matrix(self):
+	def plot_correlation_matrix(self, save=True):
 		self._build_crosscorr_matrix()
-		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix')
+		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix', save=save)
 
 	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, abs_value=False, logy=False):
 		fig, ax = plt.subplots()
@@ -187,20 +187,22 @@ class Compressor:
 
 		return fig, ax
 	
-	def plot_fisher_matrix(self):
+	def plot_fisher_matrix(self, save=True):
 		fig, ax = self._plot_matrix(self.fisher_matrix, title='Fisher information matrix')
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 
-		self._save_plot(fig, 'fisher_matrix')
+		if save:
+			self._save_plot(fig, 'fisher_matrix')
 		
 		fig, ax = self._plot_matrix(self.fisher_corr_matrix, title='Fisher information correlation matrix')
 
 		ax.set_xticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 		ax.set_yticks(ticks=[0, 1, 2, 3], labels=['$\Omega_m$', '$S_8$', '$h$', '$w_0$'])
 
-		self._save_plot(fig, 'fisher_corr_matrix')
+		if save:
+			self._save_plot(fig, 'fisher_corr_matrix')
 
 	def debug(self, message):
 		if self.verbose:
