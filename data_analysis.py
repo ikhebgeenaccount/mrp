@@ -37,25 +37,29 @@ from utils.file_system import check_folder_exists
 slics_truths = [0.2905, 0.826 * np.sqrt(0.2905 / .3), 0.6898, -1.0]
 
 
-def read_maps(filter_region=None, force_recalculate=False):
-	pipeline = Pipeline(filter_region=filter_region, save_plots=False, force_recalculate=force_recalculate, do_remember_maps=False, bng_resolution=100, three_sigma_mask=True, lazy_load=True)
+def read_maps(filter_region=None, force_recalculate=False, plots_dir='plots', products_dir='products', save_plots=False):
+	pipeline = Pipeline(
+		filter_region=filter_region, save_plots=save_plots, force_recalculate=force_recalculate, 
+		do_remember_maps=False, bng_resolution=100, three_sigma_mask=True, lazy_load=True,
+		plots_dir=plots_dir, products_dir=products_dir
+	)
 	pipeline.find_max_min_values_maps(save_all_values=False, save_maps=False)
 	# pipeline.all_values_histogram()
 
 	pipeline.read_maps()
 	pipeline.calculate_variance()
 
-	slics_pds = pipeline.slics_pds
-	cosmoslics_pds = pipeline.cosmoslics_pds
+	slics_data = pipeline.slics_data
+	cosmoslics_datas = pipeline.cosmoslics_datas
 	dist_powers = pipeline.dist_powers
 
-	return slics_pds, cosmoslics_pds, dist_powers
+	return slics_data, cosmoslics_datas, dist_powers
 
 
-def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
+def create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
 	print('Compressing data with ChiSquaredMinimizer...')
 	chisqmin = ChiSquaredMinimizer(
-		cosmoslics_pds, slics_pds, dist_powers, max_data_vector_length=100, 
+		cosmoslics_datas, slics_data, dist_powers, max_data_vector_length=100, 
 		minimum_feature_count=40, chisq_increase=chisq_increase, minimum_crosscorr_det=minimum_crosscorr_det,
 		verbose=True
 	)
@@ -73,10 +77,10 @@ def create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase, mi
 	return chisqmin
 
 
-def create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, fishinfo_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
+def create_fishinfo_comp(slics_data, cosmoslics_datas, dist_powers, fishinfo_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
 	print('Compressing data with FisherInfoMaximizer...')
 	fishinfo = FisherInfoMaximizer(
-		cosmoslics_pds, slics_pds, data_vector_length=100, 
+		cosmoslics_datas, slics_data, data_vector_length=100, 
 		minimum_feature_count=40, fisher_info_increase=fishinfo_increase, minimum_crosscorr_det=minimum_crosscorr_det,
 		verbose=True
 	)
@@ -127,7 +131,7 @@ def run_with_pickle(pickle_path):
 	return emu
 
 
-def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss'):
+def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=2500, truths=None, llhood='gauss', plots_dir='plots'):
 	with np.errstate(invalid='ignore'):
 		ndim = len(p0)
 
@@ -147,7 +151,7 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 		sampler.reset()
 
 		print('Running MCMC')
-		sampler.run_mcmc(state, nsteps, progress=True)
+		sampler.run_mcmc(state, nsteps, progress=True, progress_kwargs={'miniters': 1000})
 
 		print('Generating corner plot')
 		# Make corner plot
@@ -157,7 +161,7 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 			flat_samples, labels=cosmologies.get_cosmological_parameters('fid').columns[1:], truths=truths
 		)
 
-		fig.savefig('plots/corner.png')
+		fig.savefig(os.path.join(plots_dir, 'corner.png'))
 
 		# Plot chains
 		fig, axes = plt.subplots(4, figsize=(10, 7), sharex=True)
@@ -172,7 +176,7 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 
 		axes[-1].set_xlabel("step number")
 
-		fig.savefig('plots/chains.png')
+		fig.savefig(os.path.join(plots_dir, 'chains.png'))
 
 
 def short_test():
@@ -252,6 +256,10 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--load', action='store_true', help='Flag to set to load from pickle or not. Passed flag means load pickle object')
 	parser.add_argument('-p', '--pickle-path', type=str, help='Path to Emulator pickle object', default='emulators/all_regions_ChiSq_GPR_Emulator.joblib')
 
+	parser.add_argument('--plots-dir', type=str, help='Directory in which plots are saved', default='plots')
+	parser.add_argument('--products-dir', type=str, help='Directory in which the products are saved', default='products')
+	parser.add_argument('--save-plots-pipeline', action='store_true', help='Flag to save plots produced by Pipeline')
+
 	parser.add_argument('-r', '--recalculate', action='store_true', help='Force Pipeline to recalculate PersistenceDiagrams and everything else')
 	parser.add_argument('--n-walkers', type=int, help='Number of MCMC walkers', default=1000)
 	parser.add_argument('--burn-in-steps', type=int, default=2500, help='Number of burn in steps')
@@ -269,14 +277,17 @@ if __name__ == '__main__':
 
 	if not args.load:
 		print('Loading data')
-		slics_pds, cosmoslics_pds, dist_powers = read_maps(force_recalculate=args.recalculate)
-		comp = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1)
-		emu = create_emulator(comp)
+		slics_data, cosmoslics_datas, dist_powers = read_maps(
+			force_recalculate=args.recalculate, plots_dir=args.plots_dir, products_dir=args.products_dir, save_plots=args.save_plots_pipeline
+		)
+		comp = create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1, plots_dir=args.plots_dir)
+		emu = create_emulator(comp, plots_dir=args.plots_dir)
 	else:
 		print('Loading pickle file', args.pickle_path)
 		emu = run_with_pickle(args.pickle_path)
 
 	print(f'Running MCMC with nwalkers={args.n_walkers}, burn_in_steps={args.burn_in_steps}, nsteps={args.n_steps}, llhood={args.likelihood}')
 	run_mcmc(emu, emu.compressor.avg_slics_data_vector, p0=np.random.rand(4), truths=slics_truths, 
-			nwalkers=args.n_walkers, burn_in_steps=args.burn_in_steps, nsteps=args.n_steps, llhood=args.likelihood)
+			nwalkers=args.n_walkers, burn_in_steps=args.burn_in_steps, nsteps=args.n_steps, llhood=args.likelihood,
+			plots_dir=args.plots_dir)
 	
