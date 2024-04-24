@@ -18,21 +18,26 @@ class Compressor:
 		self.cosmoslics_datas = cosmoslics_datas
 		self.slics_data = slics_data
 
-		self.cosmoslics_training_set = self._build_training_set(cosmoslics_datas)
+		self.zbins = self.slics_data[0].zbins
+
+		self.plots_dir = 'plots'
+
+		self.compress()
+
+	def compress(self):
+		self.cosmoslics_training_set = self._build_training_set(self.cosmoslics_datas)
 		self.cosmoslics_training_set['target'] = np.array(self.cosmoslics_training_set['target'])
 		
 		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
 		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
-		self.slics_training_set = self._build_training_set(slics_data)
+		self.slics_training_set = self._build_training_set(self.slics_data)
 		self.slics_training_set['target'] = np.array(self.slics_training_set['target'])
 		self._build_covariance_matrix()
 		self._calculate_average_data_vector()
 
 		self._calculate_derivatives_lsq()
 		self._calculate_fisher_matrix()
-
-		self.plots_dir = 'plots'
 
 	def _build_training_set(self, cosm_datas: List[CosmologyData]):
 		"""Build the training set to be used with an Emulator. Must return the training set.

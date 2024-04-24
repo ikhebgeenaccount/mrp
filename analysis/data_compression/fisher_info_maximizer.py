@@ -20,7 +20,7 @@ class FisherInfoMaximizer(GrowingVectorCompressor):
 
 		# Sort full_grid by fisher info
 		# Minus to make argsort descending order
-		collapsed_fisher = np.reshape(np.max(-full_grid.fisher_matrix_per_entry, axis=(0, 1)), (2, 100, 100))
+		collapsed_fisher = np.reshape(np.max(-full_grid.fisher_matrix_per_entry, axis=(0, 1)), (len(slics_data[0].zbins_pds), 2, 100, 100))
 
 		self.fisher_info_increase = fisher_info_increase
 		self.prev_fisher_info = 0.

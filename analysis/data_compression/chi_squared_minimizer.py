@@ -12,10 +12,14 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 class ChiSquaredMinimizer(GrowingVectorCompressor):
 
 	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData],
-			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, 
+			  dist_powers, max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, 
 			  minimum_crosscorr_det=1e-5, verbose=False):
 		self.dist_powers = dist_powers
-		self.dist_powers_merged = np.array([dist_powers[0]._transform_map(), dist_powers[1]._transform_map()])
+
+		dp_merge = []
+		for zbin in slics_data[0].zbins:
+			dp_merge.append([dist_powers[zbin][0]._transform_map(), dist_powers[zbin][1]._transform_map()])
+		self.dist_powers_merged = np.array(dp_merge)
 
 		self.chisq_increase = chisq_increase
 		self.prev_chisq = 0.

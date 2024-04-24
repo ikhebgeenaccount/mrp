@@ -2,6 +2,7 @@ from typing import List
 
 import numpy as np
 
+from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.index_compressor import IndexCompressor
 from analysis.persistence_diagram import PersistenceDiagram
@@ -10,7 +11,7 @@ from analysis.persistence_diagram import PersistenceDiagram
 class GrowingVectorCompressor(IndexCompressor):
 
 	def __init__(
-			self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], pixel_scores: np.ndarray,
+			self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData], pixel_scores: np.ndarray,
 			max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5,
 			stop_after_n_unaccepted: float=np.inf, verbose=False
 		):
@@ -22,8 +23,13 @@ class GrowingVectorCompressor(IndexCompressor):
 		self.max_data_vector_length = max_data_vector_length
 
 		self.minimum_feature_count = minimum_feature_count
-		feature_counts = [[cpd.dimension_pairs_count[dim] * cpd.betti_numbers_grids[0]._transform_map() for cpd in cosmoslics_pds] for dim in [0, 1]]
-		self.max_feature_count = np.max(feature_counts, axis=1)
+		# We need to be able to filter which indices have > minimum_feature_count
+		# So, we build one large array of (cosmologies, zbins, dim, bng_resolution, bng_resolution)
+		# Then, we can np.max over axis=0 (cosmologies) to find which pixels adhere to > minimum_feature_count
+		# And filter out all others
+		feature_counts = [[[cdata.dimension_pairs_count_avg[zbin][dim] * cdata.zbins_bngs_avg[zbin][dim] for dim in [0, 1]] for zbin in slics_data[0].zbins] for cdata in cosmoslics_datas]
+		# Axis=0 is the outermost [] in the list comprehension above
+		self.max_feature_count = np.max(feature_counts, axis=0)
 
 		# Filter pixel coordinates based on minimum_feature_count
 		self.pixel_scores_argsort = self.pixel_scores_argsort[self.max_feature_count.flatten()[self.pixel_scores_argsort] >= self.minimum_feature_count]
@@ -41,14 +47,14 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		self.verbose = verbose
 
-		super().__init__(cosmoslics_pds, slics_pds, indices=[])
+		super().__init__(cosmoslics_datas, slics_data, indices=[])
 
 	def acceptance_func(self, compressor: Compressor):
 		raise NotImplementedError('Subclasses of GrowingVectorCompressor must implement acceptance_func')
 
-	def _build_training_set(self, pds: List[PersistenceDiagram]):
+	def _build_training_set(self, cosm_datas: List[CosmologyData]):
 		if self.map_indices is not None:
-			return super()._build_training_set(pds)
+			return super()._build_training_set(cosm_datas)
 
 		# Build set of indices to test
 		test_indices = self.pixel_scores_argsort[self.start_index:]
@@ -105,6 +111,6 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		# Set indices to be map_indices
 		self.set_indices(self.map_indices)
-		tset = super()._build_training_set(pds)
+		tset = super()._build_training_set(cosm_datas)
 		tset['name'] = 'growing_vector_comp'
 		return tset
