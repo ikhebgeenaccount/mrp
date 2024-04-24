@@ -225,10 +225,28 @@ class Pipeline:
 				# By making both cosmoslics_datas and slics_data a list, we can handle them the same in Compressor._build_training_set
 				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins)]
 
+		self.zbins = list(self.slics_data[0].zbins_pds.keys())
+
 		return self.slics_data, self.cosmoslics_datas
 
 	def calculate_variance(self):
 		print('Calculating SLICS/cosmoSLICS variance maps...')
+
+		self.dist_powers = {}
+		for zbin in self.zbins:
+			self.dist_powers[zbin] = []
+			for dim in [0,1]:
+				self.dist_powers[zbin].append(PixelDistinguishingPowerMap(
+					[cdata.zbins_bngs_avg[zbin][dim] for cdata in self.cosmoslics_datas],
+					self.slics_data.zbins_bngs_avg[zbin][dim],
+					self.slics_data.zbins_bngs_std[zbin][dim],
+					dim=dim
+				))
+
+				self.dist_powers[zbin][dim].save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power', save_name=zbin))
+		
+		return self.dist_powers
+
 		slics_bngs = {
 			dim: [spd.betti_numbers_grids[dim] for spd in self.slics_pds] for dim in [0, 1]
 		}
@@ -244,6 +262,8 @@ class Pipeline:
 		avg_slics_bng = {
 			dim: BettiNumbersGrid(np.mean([bng.map for bng in slics_bngs[dim]], axis=0), slics_bngs[dim][0].x_range, slics_bngs[dim][0].y_range, dim) for dim in [0, 1]
 		}
+
+		# dist_powers must have shape (zbins, 2, 100, 100)
 
 		self.dist_powers = []
 
