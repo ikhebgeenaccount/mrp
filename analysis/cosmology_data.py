@@ -15,7 +15,7 @@ class CosmologyData:
 			products_dir='products'
 		):
 		self.cosmology = cosmology
-		self.cosm_parameters = zbins_pds.values()[0].cosm_parameters
+		self.cosm_parameters = list(zbins_pds.values())[0].cosm_parameters
 
 		if zbins_pds is not None:
 			self.zbins_pds = zbins_pds
@@ -25,12 +25,14 @@ class CosmologyData:
 				} for zbin in self.zbins_pds
 			}
 
+		self.zbins = list(zbins_pds.keys())
+
 		self.products_dir = products_dir
 		self.products_loc = os.path.join(products_dir, cosmology)
 
-		self.calculate_average_bngs()
+		self.calculate_averages()
 
-	def calculate_average_bngs(self, return_std=False):
+	def calculate_averages(self, return_std=False):
 		self.zbins_bngs_avg = {
 			zbin: [
 				np.mean([pd.betti_numbers_grids[dim].map for pd in self.zbins_pds[zbin]], axis=0) for dim in [0,1]
@@ -52,3 +54,9 @@ class CosmologyData:
 			return self.zbins_pds_avg, self.zbins_pds_std
 		else:
 			return self.zbins_pds_avg
+		
+	def save(self):
+		pass
+
+	def load(self, path):
+		pass
