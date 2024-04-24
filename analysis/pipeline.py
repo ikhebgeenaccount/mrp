@@ -4,6 +4,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from analysis.cosmology_data import CosmologyData
 from analysis.map import Map
 from analysis.persistence_diagram import BettiNumbersGrid, PersistenceDiagram
 from analysis.persistence_diagram import BettiNumbersGridVarianceMap, PixelDistinguishingPowerMap
@@ -57,13 +58,19 @@ class Pipeline:
 		self.three_sigma_mask = three_sigma_mask
 		self.lazy_load = lazy_load
 
+		# List of cosmology names
+		self.cosmologies = [f'Cosmol{i}' for i in range(25)] + ['Cosmolfid', 'SLICS']
+
 	def run_pipeline(self):
 		self.find_max_min_values_maps()
 		self.read_maps()
 		self.calculate_variance()
 
-	def _get_glob_str_dir(self):
-		return f'{self.maps_dir}/*SN0*' if self.filter_cosmology is None else f'{self.maps_dir}/*SN0*{self.filter_cosmology}'
+	def _get_glob_str_dir(self, filter_cosmology=None):
+		# Always overwrite filter_cosmology option if Pipeline.filter_cosmology is set
+		if self.filter_cosmology is not None:
+			filter_cosmology = self.filter_cosmology
+		return f'{self.maps_dir}/*SN0*' if filter_cosmology is None else f'{self.maps_dir}/*SN0*{filter_cosmology}'
 
 	def _get_glob_str_file(self, dir):
 		# file_f = '*SN0*.npy' if self.filter_region is None else f'*SN0*R{self.filter_region}.S*.npy'
@@ -171,57 +178,54 @@ class Pipeline:
 
 		# self.slics_maps = []
 		# cosmoslics_maps = []
+  
+		self.cosmoslics_datas = []
+		self.slics_data = None
 
 		do_delete_maps = not self.do_remember_maps
 
 		print('Analyzing maps...')
-		for dir in tqdm(glob.glob(self._get_glob_str_dir())):
-			if os.path.isdir(dir):
-				cosm = dir.split('_')[-1]
+		# For each cosmology
+		for cosmology in tqdm(self.cosmologies):
+			curr_cosm_zbins = {}
+			# For each redshift bin
+			for dir in tqdm(glob.glob(self._get_glob_str_dir(filter_cosmology=cosmology)), leave=False):
+				if os.path.isdir(dir):
+					# Determine zbin
+					if 'Cosmol' in dir:
+						zbin = dir.split('_')[-2]
+					else:
+						zbin = dir.split('_')[-1]
 
-				cosmoslics = 'Cosmo' in cosm
+					# Track all persistence diagrams
+					curr_zbin_pds = []
 
-				curr_cosm_maps = []
+					glob_str = self._get_glob_str_file(dir)
 
-				glob_str = self._get_glob_str_file(dir)
-
-				for i, map_path in enumerate(glob.glob(glob_str)):
-					if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
-						continue
-					map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
-					# map.get_persistence()
-
-					# SLICS must be saved at LOS level
-					if not cosmoslics:
+					# For each map
+					for i, map_path in enumerate(glob.glob(glob_str)):
+						if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
+							continue
+						map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
+						
+						# One Map per PersistenceDiagram = saved at LOS level, average later
 						perdi = PersistenceDiagram(
 							[map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
 							plots_dir=self.plots_dir, products_dir=self.products_dir
 						)
 						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=False)
-						self.slics_pds.append(perdi)
-						# self.slics_maps.append(map)
-					else:
-						curr_cosm_maps.append(map)
-						# cosmoslics_uniq_pds.append(perdi)
-						# cosmoslics_maps.append(map)
+						curr_zbin_pds.append(perdi)
+			
+				curr_cosm_zbins[zbin] = curr_zbin_pds
+			
+			if cosmology != 'SLICS':
+				self.cosmoslics_datas.append(CosmologyData(cosmology, curr_cosm_zbins))
+			else:
+				# Put it in a list to make our live easier when compressing
+				# By making both cosmoslics_datas and slics_data a list, we can handle them the same in Compressor._build_training_set
+				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins)]
 
-				if len(curr_cosm_maps) > 0 and cosmoslics:
-					perdi = PersistenceDiagram(
-						curr_cosm_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
-						plots_dir=self.plots_dir, products_dir=self.products_dir
-					)
-					# pd.generate_heatmaps(resolution=100, gaussian_kernel_size_in_sigma=3)
-					# pd.add_average_lines()
-					perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=False)
-
-					# if self.save_plots:
-					# 	perdi.plot()
-
-					# cosmoSLICS must be saved at cosmology level
-					if cosmoslics:
-						self.cosmoslics_pds.append(perdi)
-
-		return self.slics_pds, self.cosmoslics_pds
+		return self.slics_data, self.cosmoslics_datas
 
 	def calculate_variance(self):
 		print('Calculating SLICS/cosmoSLICS variance maps...')
