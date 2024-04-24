@@ -5,6 +5,7 @@ from numpy.polynomial.polynomial import Polynomial
 import matplotlib.pyplot as plt
 from scipy.optimize import lsq_linear
 
+from analysis.cosmology_data import CosmologyData
 from analysis.persistence_diagram import PersistenceDiagram
 
 
@@ -13,17 +14,17 @@ class Compressor:
 	Subclasses  must implement _build_training_set and _build_equivalent_slics_set.
 	"""
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram]):
-		self.cosmoslics_pds = cosmoslics_pds
-		self.slics_pds = slics_pds
+	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData]):
+		self.cosmoslics_datas = cosmoslics_datas
+		self.slics_data = slics_data
 
-		self.cosmoslics_training_set = self._build_training_set(cosmoslics_pds)
+		self.cosmoslics_training_set = self._build_training_set(cosmoslics_datas)
 		self.cosmoslics_training_set['target'] = np.array(self.cosmoslics_training_set['target'])
 		
 		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
 		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
-		self.slics_training_set = self._build_training_set(slics_pds)
+		self.slics_training_set = self._build_training_set(slics_data)
 		self.slics_training_set['target'] = np.array(self.slics_training_set['target'])
 		self._build_covariance_matrix()
 		self._calculate_average_data_vector()
@@ -33,7 +34,7 @@ class Compressor:
 
 		self.plots_dir = 'plots'
 
-	def _build_training_set(self, pds: List[PersistenceDiagram]):
+	def _build_training_set(self, cosm_datas: List[CosmologyData]):
 		"""Build the training set to be used with an Emulator. Must return the training set.
 		Training sets are dictionaries containing name, input and target fields.		
 		"""
