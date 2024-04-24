@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 
+from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.index_compressor import IndexCompressor
 from analysis.data_compression.growing_vector_compressor import GrowingVectorCompressor
 from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishingPowerMap
@@ -10,7 +11,7 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 
 class ChiSquaredMinimizer(GrowingVectorCompressor):
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram],
+	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData],
 			  dist_powers: List[PixelDistinguishingPowerMap], max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, 
 			  minimum_crosscorr_det=1e-5, verbose=False):
 		self.dist_powers = dist_powers
@@ -22,7 +23,7 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		self.chisq_values = []
 		self.fisher_dets = []
 
-		super().__init__(cosmoslics_pds, slics_pds, pixel_scores=self.dist_powers_merged, max_data_vector_length=max_data_vector_length,
+		super().__init__(cosmoslics_datas, slics_data, pixel_scores=self.dist_powers_merged, max_data_vector_length=max_data_vector_length,
 		minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)	
 
 	def acceptance_func(self, compressor: IndexCompressor):

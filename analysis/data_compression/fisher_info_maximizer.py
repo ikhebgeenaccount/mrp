@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.full_grid import FullGrid
 from analysis.data_compression.growing_vector_compressor import GrowingVectorCompressor
@@ -11,11 +12,11 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 
 class FisherInfoMaximizer(GrowingVectorCompressor):
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram], data_vector_length, 
+	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData], data_vector_length, 
 			  fisher_info_increase:float=0.05, minimum_crosscorr_det: float=1e-5, minimum_feature_count: float=0, verbose=False):
 		self.data_vector_length = data_vector_length
 
-		full_grid = FullGrid(cosmoslics_pds, slics_pds)
+		full_grid = FullGrid(cosmoslics_datas, slics_data)
 
 		# Sort full_grid by fisher info
 		# Minus to make argsort descending order
@@ -25,7 +26,7 @@ class FisherInfoMaximizer(GrowingVectorCompressor):
 		self.prev_fisher_info = 0.
 		self.fisher_info_vals = []
 
-		super().__init__(cosmoslics_pds, slics_pds, pixel_scores=collapsed_fisher, max_data_vector_length=data_vector_length,
+		super().__init__(cosmoslics_datas, slics_data, pixel_scores=collapsed_fisher, max_data_vector_length=data_vector_length,
 			minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)
 
 	def acceptance_func(self, compressor: Compressor):
