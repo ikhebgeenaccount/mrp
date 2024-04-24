@@ -1,3 +1,4 @@
+from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.persistence_diagram import BettiNumbersGrid, PersistenceDiagram
 
@@ -9,36 +10,43 @@ from typing import List
 
 class IndexCompressor(Compressor):
 
-	def __init__(self, cosmoslics_pds: List[PersistenceDiagram], slics_pds: List[PersistenceDiagram],
+	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData],
 			  indices, add_feature_count: bool=False):
 		self.set_indices(indices)
 		self.add_feature_count = add_feature_count
-		super().__init__(cosmoslics_pds, slics_pds)
+		super().__init__(cosmoslics_datas, slics_data)
 
 	def set_indices(self, indices):
 		self.indices = np.array(indices)
 		self.indices_t = self.indices.T
 
-	def _build_training_set(self, pds: List[PersistenceDiagram]):
+	def _build_training_set(self, cosm_datas: List[CosmologyData]):
 		training_set = {
 			'name': 'index',
 			'input': [],
 			'target': []
 		}
-		for pd in pds:
-			pds_bngs_merged = np.array([pd.betti_numbers_grids[0]._transform_map(), pd.betti_numbers_grids[1]._transform_map()])
-			training_set['input'].append(np.array([val for key, val in pd.cosm_parameters.items() if key != 'id']))
+		for cosmdata in cosm_datas:
+			bngs = []
+			for zbin in self.zbins:
+				# Add all redshift bins' BettiNumbersGrids (both dimensions)
+				bngs.append(cosmdata.zbins_bngs_avg[zbin][0])
+				bngs.append(cosmdata.zbins_bngs_avg[zbin][1])
+
+			# Turn list into numpy array for easy slicing
+			bngs_merged = np.array(bngs)
+			training_set['input'].append(np.array([val for key, val in cosmdata.cosm_parameters.items() if key != 'id']))
 			if len(self.indices) > 0 and self.add_feature_count:
 				training_set['target'].append(
 					np.concatenate(
-						(pd.dimension_pairs_count / pd.maps_count, 
-	   					pds_bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
+						(cosmdata.dimension_pairs_count_avg[zbin], 
+	   					bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
 					)
 				)
 			elif self.add_feature_count:
-				training_set['target'].append(pd.dimension_pairs_count / pd.maps_count)
+				training_set['target'].append(cosmdata.dimension_pairs_count_avg[zbin])
 			else:
-				training_set['target'].append(pds_bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
+				training_set['target'].append(bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
 
 		return training_set
 
