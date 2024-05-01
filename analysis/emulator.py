@@ -39,12 +39,12 @@ class Emulator:
 		self.plots_dir = plots_dir
 
 	def fit(self):
-		self.regressor.fit(self.training_set['scaled_input'], self.training_set['target'])
+		self.regressor.fit(self.training_set['input'], self.training_set['target'])
 	
 	def predict(self, X):
 		# scale X through self.standard_scaler, not fitting again
 		# print(self.regressor.predict(X, return_std=True))
-		return self.regressor.predict(self.standard_scaler.transform(X))
+		return self.regressor.predict(X)
 	
 	def validate(self, make_plot=False):
 		loo = LeaveOneOut()
@@ -53,13 +53,19 @@ class Emulator:
 
 		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
 			temp_regr = self.regressor_type(**self.regressor_args)
-			temp_regr.fit(self.training_set['scaled_input'][train_index], self.training_set['target'][train_index])
+			print(self.training_set['input'][train_index].shape)
+			print(self.training_set['target'][train_index].shape)
+			temp_regr.fit(self.training_set['input'][train_index], self.training_set['target'][train_index])
 
 			# Not np.abs to also get negative error
-			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0]
+			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['input'][test_index])[0]) / self.training_set['target'][test_index][0]
 			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			all_mse.append(mse)
+			print(f'######### TEST INDEX {test_index} ######### (input: {self.training_set["input"][test_index]})')
+			print('target\t\tpred\t\tfrac err')
+			for j, _ in enumerate(mse):
+				print(f"{self.training_set['target'][test_index][0][j]:.4e}\t{temp_regr.predict(self.training_set['input'][test_index])[0][j]:.4e}\t{mse[j]:.4e}\t")
 
 		avg_mse = np.nanmean(all_mse, axis=0)
 
