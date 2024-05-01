@@ -17,7 +17,7 @@ class MCMC:
 		self.data_vector = data_vector
 
 		self.covariance_matrix = covariance_matrix
-		print('cov det=', np.linalg.det(self.covariance_matrix))
+		# print('cor mat det=', np.linalg.det(self.emulator.compressor.slics_crosscorr_matrix))
 		print('Covariance matrix inversion')
 		self.inv_cov_matrix = np.linalg.inv(covariance_matrix)
 		print(self.inv_cov_matrix)
@@ -25,7 +25,7 @@ class MCMC:
 		# self.cov_matrix_det = np.linalg.det(covariance_matrix)
 		# self.cov_det_inv_sqrt = 1. / np.sqrt(self.cov_matrix_det)
 
-		self.n_slics = len(emulator.compressor.slics_pds)
+		self.n_slics = emulator.compressor.slics_data[0].pds_count
 
 		# p = len(data_vector)
 		# self.c_p = scipy.special.gamma(self.n_slics / 2.) / (np.power(np.pi * (self.n_slics - 1), p/2.) * scipy.special.gamma((self.n_slics - p) / 2.))

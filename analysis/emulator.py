@@ -26,10 +26,12 @@ class Emulator:
 		self.regressor = regressor_type(**regressor_args)
 
 		self.standard_scaler = StandardScaler()
+		self.standard_scaler_y = StandardScaler()
 		# Ensure that training_set contains numpy.ndarrays
 		self.training_set['input'] = np.array(self.training_set['input'])
 		self.training_set['scaled_input'] = self.standard_scaler.fit_transform(self.training_set['input'])
 		self.training_set['target'] = np.array(self.training_set['target'])
+		self.training_set['scaled_target'] = self.standard_scaler_y.fit_transform(self.training_set['target'])
 		# self.training_set['scaled_target'] = self.standard_scaler.fit_transform(self.training_set['target'])
 
 		self.data_vector_length = self.training_set['target'].shape[1]
@@ -71,7 +73,6 @@ class Emulator:
 		rcv = RandomizedSearchCV()
 		pass
 
-
 	def create_loocv_plot(self, avg_mse, all_mse, plot_cov=True):
 		fig, ax = plt.subplots()
 		ax.set_title(f'{self.training_set["name"]} after LOOCV')
@@ -94,37 +95,53 @@ class Emulator:
 
 		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
 		return fig, ax
+	
+	def plot_predictions_over_parameters(self, preds_count=10, colormap='viridis', save=True):
+		for i in range(4):
+			self.plot_predictions_over_input_index(i, preds_count, colormap, save)
 
-	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis', save=True):
-		s8_range = [.6, .9]
+	def plot_predictions_over_input_index(self, index, index_preds=10, colormap='viridis', save=True):
+		index_ranges = [
+			[0.1, 0.55], 
+			[0.6, 0.9],
+			[0.6, 0.9],
+			[-2.0, 0.5]
+		]
+
+		index_names = ['Omega_M', 'S_8', 'h', 'w_0']
+
+		index_range = index_ranges[index]
 
 		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, abs_value=False)
 
-		s8_values = np.linspace(*s8_range, s8_count)
+		param_values = np.linspace(*index_range, index_preds)
 
-		cosm_params = np.broadcast_to(self.compressor.slics_training_set['input'][0], (s8_count, 4)).copy()
+		cosm_params = np.broadcast_to(self.compressor.slics_training_set['input'][0], (index_preds, 4)).copy()
 		# 2nd entry is S_8
-		cosm_params[:, 1] = s8_values
+		cosm_params[:, index] = param_values
 
 		predictions = self.predict(cosm_params)
 
 		# Add the predictions to the plot
 		cmap = mpl.colormaps[colormap]
-		norm = mpl.colors.Normalize(vmin=s8_range[0], vmax=s8_range[1])
+		norm = mpl.colors.Normalize(vmin=index_range[0], vmax=index_range[1])
 
 		# ScalarMappable for colorbar
 		sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 		sm.set_array([])
 		cbar = fig.colorbar(sm, ax=ax)
-		cbar.set_label('$S_8$')
-		cbar.ax.axhline(self.compressor.slics_training_set['input'][0][1], color='black', linestyle='dotted')
+		cbar.set_label(index_names[index])
+		cbar.ax.axhline(self.compressor.slics_training_set['input'][0][index], color='black', linestyle='dotted')
 
 		for i, pred in enumerate(predictions):
-			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector, c=cmap(norm(s8_values[i])))
+			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector, c=cmap(norm(param_values[i])))
 
 		if save:
-			fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_s8.png')
+			fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_{index_names[index]}.png')
 			plt.close(fig)
+
+	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis', save=True):
+		self.plot_predictions_over_input_index(1, s8_count, colormap, save)
 	
 	def plot_data_vector_over_param_space(self, base_cosmology_id):		
 		fig, axs = plt.subplots(nrows=self.data_vector_length, ncols=4, figsize=(30, 4 * self.data_vector_length), sharex='col', sharey='row')

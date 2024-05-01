@@ -31,7 +31,7 @@ class Compressor:
 		self.input_vector_length = len(self.cosmoslics_training_set['input'][0])
 		self.data_vector_length = len(self.cosmoslics_training_set['target'][0])
 
-		self.slics_training_set = self._build_training_set(self.slics_data)
+		self.slics_training_set = self._build_slics_training_set(self.slics_data)
 		self.slics_training_set['target'] = np.array(self.slics_training_set['target'])
 		self._build_covariance_matrix()
 		self._calculate_average_data_vector()
@@ -43,6 +43,9 @@ class Compressor:
 		"""Build the training set to be used with an Emulator. Must return the training set.
 		Training sets are dictionaries containing name, input and target fields.		
 		"""
+		raise NotImplementedError
+
+	def _build_slics_training_set(self, slics_data: List[CosmologyData]):
 		raise NotImplementedError
 
 	def _build_crosscorr_matrix(self):
@@ -57,7 +60,7 @@ class Compressor:
 			self.slics_covariance_matrix = np.array([[np.var(self.slics_training_set['target'].T)]])
 		else:
 			self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
-		self.slics_covariance_matrix = self.slics_covariance_matrix / np.sqrt(50. * 18.)
+		self.slics_covariance_matrix = self.slics_covariance_matrix / self.cosmoslics_datas[0].zbins_pds[self.zbins[0]][0].maps_count
 
 	def _calculate_average_data_vector(self):
 		if self.data_vector_length == 1:

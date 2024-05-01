@@ -13,14 +13,13 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 
 	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData],
 			  dist_powers, max_data_vector_length=250, minimum_feature_count=0, chisq_increase=0.2, 
-			  minimum_crosscorr_det=1e-5, verbose=False):
+			  minimum_crosscorr_det=1e-5, stop_after_n_unaccepted=np.inf, add_feature_count=False, verbose=False):
 		self.dist_powers = dist_powers
 
 		dp_merge = []
 		for zbin in slics_data[0].zbins:
 			dp_merge.append([dist_powers[zbin][0]._transform_map(), dist_powers[zbin][1]._transform_map()])
 		self.dist_powers_merged = np.array(dp_merge)
-
 		self.chisq_increase = chisq_increase
 		self.prev_chisq = 0.
 
@@ -28,7 +27,8 @@ class ChiSquaredMinimizer(GrowingVectorCompressor):
 		self.fisher_dets = []
 
 		super().__init__(cosmoslics_datas, slics_data, pixel_scores=self.dist_powers_merged, max_data_vector_length=max_data_vector_length,
-		minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)	
+		minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, add_feature_count=add_feature_count, 
+		stop_after_n_unaccepted=stop_after_n_unaccepted, verbose=verbose)	
 
 	def acceptance_func(self, compressor: IndexCompressor):
 		self.debug(f'{self.prev_chisq:.5f}')

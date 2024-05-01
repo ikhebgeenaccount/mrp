@@ -21,17 +21,20 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
-		if len(maps) == 1:
-			# Save the line of sight discriminator if we only have one map
-			if hasattr(maps[0], 'filename_without_folder'):
-				self.los = maps[0].filename_without_folder
-				self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology, self.los)
-				self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology, self.los)
-			else:
-				raise ValueError('No los discriminator found')
-		else:		
-			self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
-			self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology)
+		# if len(maps) == 1:
+		# 	# Save the line of sight discriminator if we only have one map
+		# 	if hasattr(maps[0], 'filename_without_folder'):
+		# 		self.los = maps[0].filename_without_folder
+		# 		self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology, self.los)
+		# 		self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology, self.los)
+		# 	else:
+		# 		raise ValueError('No los discriminator found')
+		# else:		
+		# 	self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
+		# 	self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology)
+
+		self.product_loc = os.path.join(products_dir, 'persistence_diagrams', maps[0].zbin, f'Cosmol{maps[0].cosmology_id}', f'LOS{maps[0].los}')
+		self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', maps[0].zbin, f'Cosmol{maps[0].cosmology_id}', f'LOS{maps[0].los}')
 
 		file_system.check_folder_exists(self.product_loc)
 
@@ -405,7 +408,13 @@ class BettiNumbersGrid(BaseRangedMap):
 
 class BettiNumbersGridVarianceMap(BaseRangedMap):
 
-	def __init__(self, betti_numbers_grids: List[BettiNumbersGrid], birth_range, death_range, dimension):
+	def __init__(self, betti_numbers_grids: List[BettiNumbersGrid], birth_range=None, death_range=None, dimension=None):
+		if birth_range is None:
+			birth_range = betti_numbers_grids[0].x_range
+		if death_range is None:
+			death_range = betti_numbers_grids[0].y_range
+		if dimension is None:
+			dimension = betti_numbers_grids[0].dimension
 		super().__init__(None, birth_range, death_range, dimension, name='betti_numbers_grid_variance_map')
 
 		grids = []

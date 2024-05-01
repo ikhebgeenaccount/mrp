@@ -36,6 +36,7 @@ class Pipeline:
 			plots_dir='plots', 
 			products_dir='products', 
 			force_recalculate=False,
+			filter_zbin=None,
 			filter_region=None,
 			filter_cosmology=None,
 			filter_los=None,
@@ -49,9 +50,12 @@ class Pipeline:
 		self.plots_dir = plots_dir
 		self.products_dir = products_dir
 		self.recalculate = force_recalculate
+
+		self.filter_zbin = filter_zbin if filter_zbin is not None else '*'
 		self.filter_region = filter_region if filter_region is not None else '*'
-		self.filter_cosmology = filter_cosmology
+		self.filter_cosmology = f'Cosmol{filter_cosmology}' if filter_cosmology is not None else '*'
 		self.filter_los = filter_los if filter_los is not None else '*'
+
 		self.do_remember_maps = do_remember_maps
 		self.save_plots = save_plots
 		self.bng_resolution = bng_resolution
@@ -61,6 +65,15 @@ class Pipeline:
 		# List of cosmology names
 		self.cosmologies = [f'Cosmol{i}' for i in range(25)] + ['Cosmolfid', 'SLICS']
 
+		# List of LOS numbers for cosmoSLICS and SLICS
+		# cosmoSLICS: 1 - 50 inclusive
+		self.cosmoslics_los = list(range(1, 51))
+		# SLICS: 74 - 292 inclusive, excluding 198 & 199
+		self.slics_los = list(range(74, 293))
+		self.slics_los.remove(198)
+		self.slics_los.remove(199)
+
+
 	def run_pipeline(self):
 		self.find_max_min_values_maps()
 		self.read_maps()
@@ -68,16 +81,30 @@ class Pipeline:
 
 	def _get_glob_str_dir(self, filter_cosmology=None):
 		# Always overwrite filter_cosmology option if Pipeline.filter_cosmology is set
-		if self.filter_cosmology is not None:
-			filter_cosmology = self.filter_cosmology
-		return f'{self.maps_dir}/*SN0*' if filter_cosmology is None else f'{self.maps_dir}/*SN0*{filter_cosmology}'
 
-	def _get_glob_str_file(self, dir):
+		if self.filter_cosmology != '*':
+			filter_cosmology = self.filter_cosmology
+		
+		# SLICS dirs end with the Zbin, which ends with a dot followed by a number
+		if filter_cosmology != 'SLICS':
+			filter_cosmology = f'_{filter_cosmology}'
+		elif self.filter_zbin != '*':
+			filter_cosmology = ''
+		else:
+			filter_cosmology =  '.[0-9]'
+
+		return f'{self.maps_dir}/MRres140.64arcs_100Sqdeg_SN*_Mosaic_KiDS1000GpAM_zKiDS1000_{self.filter_zbin}{filter_cosmology}'
+
+	def _get_glob_str_file(self, dir, filter_los='*'):
 		# file_f = '*SN0*.npy' if self.filter_region is None else f'*SN0*R{self.filter_region}.S*.npy'
 		# dir_f = f'{dir}' if self.filter_cosmology is None else f'{dir}'
 		# return f'{dir}/*SN0*.npy' if self.filter_region is None else f'{dir}/*SN0*R{self.filter_region}.S*.npy'
+
+		# Overwrite filter_los if Pipeline.filter_los is set
+		if self.filter_los != '*':
+			filter_los = self.filter_los
 	
-		return dir + f'/SN0*LOS{self.filter_los}R{self.filter_region}.S*.npy'
+		return dir + f'/SN0*LOS{filter_los}R{self.filter_region}.S*.npy'
 
 	def find_max_min_values_maps(self, save_all_values=False, save_maps=False):		
 		print('Determining max and min values in maps...')
@@ -186,31 +213,33 @@ class Pipeline:
 
 		print('Analyzing maps...')
 		# For each cosmology
-		for cosmology in tqdm(self.cosmologies):
+		cosm_tqdm = tqdm(self.cosmologies)
+		for cosmology in cosm_tqdm:
+			cosm_tqdm.set_description(f'{cosmology}')
 			curr_cosm_zbins = {}
 			# For each redshift bin
-			for dir in tqdm(glob.glob(self._get_glob_str_dir(filter_cosmology=cosmology)), leave=False):
+			zbin_tqdm = tqdm(glob.glob(self._get_glob_str_dir(filter_cosmology=cosmology)), leave=False)
+			for dir in zbin_tqdm:
 				if os.path.isdir(dir):
-					# Determine zbin
-					if 'Cosmol' in dir:
-						zbin = dir.split('_')[-2]
-					else:
-						zbin = dir.split('_')[-1]
+					zbin_tqdm.write(f'Processing maps in {dir}')
 
 					# Track all persistence diagrams
 					curr_zbin_pds = []
 
-					glob_str = self._get_glob_str_file(dir)
-
-					# For each map
-					for i, map_path in enumerate(glob.glob(glob_str)):
-						if 'LOS0' in map_path:# or 'LOS10' in map_path or 'LOS46' in map_path:
-							continue
-						map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
-						
-						# One Map per PersistenceDiagram = saved at LOS level, average later
+					# For each LOS
+					los_list = self.slics_los if cosmology == 'SLICS' else self.cosmoslics_los
+					for los in los_list:
+						curr_los_maps = []
+						glob_str = self._get_glob_str_file(dir, filter_los=los)
+						# For each map
+						for i, map_path in enumerate(glob.glob(glob_str)):
+							los_map = Map(map_path, three_sigma_mask=self.three_sigma_mask, lazy_load=self.lazy_load)
+							zbin = los_map.zbin
+							curr_los_maps.append(los_map)
+							
+						# One PersistenceDiagram per LOS, combining regions
 						perdi = PersistenceDiagram(
-							[map], do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+							curr_los_maps, do_delete_maps=do_delete_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
 							plots_dir=self.plots_dir, products_dir=self.products_dir
 						)
 						perdi.generate_betti_numbers_grids(resolution=self.bng_resolution, data_ranges_dim=self.data_range, save_plots=False)
@@ -223,7 +252,7 @@ class Pipeline:
 			else:
 				# Put it in a list to make our live easier when compressing
 				# By making both cosmoslics_datas and slics_data a list, we can handle them the same in Compressor._build_training_set
-				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins)]
+				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins, n_cosmoslics_los=len(self.cosmoslics_los))]
 
 		self.zbins = list(self.slics_data[0].zbins_pds.keys())
 
@@ -238,59 +267,60 @@ class Pipeline:
 			for dim in [0,1]:
 				self.dist_powers[zbin].append(PixelDistinguishingPowerMap(
 					[cdata.zbins_bngs_avg[zbin][dim] for cdata in self.cosmoslics_datas],
-					self.slics_data.zbins_bngs_avg[zbin][dim],
-					self.slics_data.zbins_bngs_std[zbin][dim],
-					dim=dim
+					self.slics_data[0].zbins_bngs_avg[zbin][dim],
+					self.slics_data[0].zbins_bngs_std[zbin][dim],
+					dimension=dim
 				))
 
-				self.dist_powers[zbin][dim].save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power', save_name=zbin))
+				self.dist_powers[zbin][dim].save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'), save_name=zbin)
 		
 		return self.dist_powers
 
-		slics_bngs = {
-			dim: [spd.betti_numbers_grids[dim] for spd in self.slics_pds] for dim in [0, 1]
-		}
-		cosmoslics_bngs = {
-			dim: [cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds] for dim in [0, 1]
-		}
+		# slics_bngs = {
+		# 	dim: [spd.betti_numbers_grids[dim] for spd in self.slics_pds] for dim in [0, 1]
+		# }
+		# cosmoslics_bngs = {
+		# 	dim: [cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds] for dim in [0, 1]
+		# }
 
-		# slics_pd = PersistenceDiagram(
-		# 	self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
-		# 	plots_dir=self.plots_dir, products_dir=self.products_dir
-		# )
-		# slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
-		avg_slics_bng = {
-			dim: BettiNumbersGrid(np.mean([bng.map for bng in slics_bngs[dim]], axis=0), slics_bngs[dim][0].x_range, slics_bngs[dim][0].y_range, dim) for dim in [0, 1]
-		}
+		# # slics_pd = PersistenceDiagram(
+		# # 	self.slics_maps, lazy_load=self.lazy_load, recalculate=self.recalculate,
+		# # 	plots_dir=self.plots_dir, products_dir=self.products_dir
+		# # )
+		# # slics_pd.generate_betti_numbers_grids(data_ranges_dim=self.data_range, resolution=self.bng_resolution)
+		# avg_slics_bng = {
+		# 	dim: BettiNumbersGrid(np.mean([bng.map for bng in slics_bngs[dim]], axis=0), slics_bngs[dim][0].x_range, slics_bngs[dim][0].y_range, dim) for dim in [0, 1]
+		# }
 
-		# dist_powers must have shape (zbins, 2, 100, 100)
+		# # dist_powers must have shape (zbins, 2, 100, 100)
 
-		self.dist_powers = []
+		# self.dist_powers = []
 
-		for i, bngs in enumerate([slics_bngs, cosmoslics_bngs]):
-			t = 'SLICS' if i == 0 else 'cosmoSLICS'
-			for dim in [0, 1]:
-				# Calculate Variance map
-				var_map = BettiNumbersGridVarianceMap(bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
-				if t == 'SLICS':
-					# SLICS variance needs to be divided by sqrt(n_cosmoSLICS_realizations)
-					var_map.map = var_map.map / np.sqrt(50. * 18.)
-				var_map.save(os.path.join(self.products_dir, 'bng_variance', t))
+		# for i, bngs in enumerate([slics_bngs, cosmoslics_bngs]):
+		# 	t = 'SLICS' if i == 0 else 'cosmoSLICS'
+		# 	for dim in [0, 1]:
+		# 		# Calculate Variance map
+		# 		var_map = BettiNumbersGridVarianceMap(bngs[dim], birth_range=self.data_range[dim], death_range=self.data_range[dim], dimension=dim)
+		# 		if t == 'SLICS':
+		# 			# SLICS variance needs to be divided by sqrt(n_cosmoSLICS_realizations)
+		# 			var_map.map = var_map.map / np.sqrt(len(self.cosmoslics_los))
 
-				if self.save_plots:
-					var_map.save_figure(os.path.join(self.plots_dir, 'bng_variance', t), title=f'{t} variance, dim={dim}')
+		# 		var_map.save(os.path.join(self.products_dir, 'bng_variance', t))
 
-				# Calculate pixel distinguishing power map if SLICS
-				if t == 'SLICS':
-					dist_power = PixelDistinguishingPowerMap([cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds], avg_slics_bng[dim], var_map, dimension=dim)
-					dist_power.save(os.path.join(self.products_dir, 'pixel_distinguishing_power'))
+		# 		if self.save_plots:
+		# 			var_map.save_figure(os.path.join(self.plots_dir, 'bng_variance', t), title=f'{t} variance, dim={dim}')
+
+		# 		# Calculate pixel distinguishing power map if SLICS
+		# 		if t == 'SLICS':
+		# 			dist_power = PixelDistinguishingPowerMap([cpd.betti_numbers_grids[dim] for cpd in self.cosmoslics_pds], avg_slics_bng[dim], var_map, dimension=dim)
+		# 			dist_power.save(os.path.join(self.products_dir, 'pixel_distinguishing_power'))
 				
-					if self.save_plots:
-						dist_power.save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'))
+		# 			if self.save_plots:
+		# 				dist_power.save_figure(os.path.join(self.plots_dir, 'pixel_distinguishing_power'))
 
-					self.dist_powers.append(dist_power)
+		# 			self.dist_powers.append(dist_power)
 
-		# del slics_pd
-		# del self.slics_maps
+		# # del slics_pd
+		# # del self.slics_maps
 
-		return self.dist_powers
+		# return self.dist_powers

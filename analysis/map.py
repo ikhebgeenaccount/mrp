@@ -50,6 +50,10 @@ class Map:
 			else:
 				self.cosmology_id = 'SLICS'
 
+			zbin_patt = re.compile('((?:ZBcut[0-9.-]+)(?:_X_ZBcut[0-9.-]+)?)')
+			zbin_mat = zbin_patt.findall(self.cosmology)
+			self.zbin = zbin_mat[0]
+
 			if not lazy_load:
 				self._load()
 		elif filename is None:

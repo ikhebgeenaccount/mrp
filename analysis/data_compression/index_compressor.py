@@ -30,23 +30,56 @@ class IndexCompressor(Compressor):
 			bngs = []
 			for zbin in self.zbins:
 				# Add all redshift bins' BettiNumbersGrids (both dimensions)
-				bngs.append(cosmdata.zbins_bngs_avg[zbin][0])
-				bngs.append(cosmdata.zbins_bngs_avg[zbin][1])
+				bngs.append(
+					[cosmdata.zbins_bngs_avg[zbin][0]._transform_map(),
+					cosmdata.zbins_bngs_avg[zbin][1]._transform_map()]
+				)
 
 			# Turn list into numpy array for easy slicing
 			bngs_merged = np.array(bngs)
+			dimpair_counts = cosmdata.dimension_pairs_count_avg[zbin]
+			self._select_pixels(bngs_merged, dimpair_counts, training_set)
+
 			training_set['input'].append(np.array([val for key, val in cosmdata.cosm_parameters.items() if key != 'id']))
-			if len(self.indices) > 0 and self.add_feature_count:
-				training_set['target'].append(
-					np.concatenate(
-						(cosmdata.dimension_pairs_count_avg[zbin], 
-	   					bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
-					)
+
+		return training_set
+
+	def _select_pixels(self, bngs_merged, dimpair_counts, training_set):		
+		
+		if len(self.indices) > 0 and self.add_feature_count:
+			training_set['target'].append(
+				np.concatenate(
+					(dimpair_counts, 
+					bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2], self.indices_t[3]].flatten())
 				)
-			elif self.add_feature_count:
-				training_set['target'].append(cosmdata.dimension_pairs_count_avg[zbin])
-			else:
-				training_set['target'].append(bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2]].flatten())
+			)
+		elif self.add_feature_count:
+			training_set['target'].append(dimpair_counts)
+		else:
+			training_set['target'].append(bngs_merged[self.indices_t[0], self.indices_t[1], self.indices_t[2], self.indices_t[3]].flatten())
+
+	def _build_slics_training_set(self, slics_data: List[CosmologyData]):
+		training_set = {
+			'name': 'index',
+			'input': [],
+			'target': []
+		}
+		sdata = slics_data[0]
+		for index_pd in range(slics_data[0].pds_count):
+			bngs = []
+			for zbin in self.zbins:
+				# Add all redshift bins' BettiNumbersGrids (both dimensions)
+				bngs.append([
+					sdata.zbins_bngs[zbin][0][index_pd]._transform_map(),
+					sdata.zbins_bngs[zbin][1][index_pd]._transform_map()]
+				)
+
+			# Turn list into numpy array for easy slicing
+			bngs_merged = np.array(bngs)
+			dimpair_counts = sdata.zbins_dimension_pairs_counts[zbin][index_pd]
+			self._select_pixels(bngs_merged, dimpair_counts, training_set)
+
+			training_set['input'].append(np.array([val for key, val in sdata.cosm_parameters.items() if key != 'id']))
 
 		return training_set
 
