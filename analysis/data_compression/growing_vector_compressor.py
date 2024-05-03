@@ -6,6 +6,12 @@ from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.index_compressor import IndexCompressor
 from analysis.persistence_diagram import PersistenceDiagram
+from utils.is_notebook import is_notebook
+
+if is_notebook():
+	from tqdm.notebook import tqdm
+else:
+	from tqdm import tqdm
 
 
 class GrowingVectorCompressor(IndexCompressor):
@@ -63,17 +69,15 @@ class GrowingVectorCompressor(IndexCompressor):
 
 		last_i_accepted = 0
 
-		for i, new_index in enumerate(test_indices):
-			if i % 1000 == 1:
-				print(f'Analyzing {i}st index of {len(test_indices)}')
+		for i, new_index in enumerate(tqdm(test_indices, leave=False)):
 
 			# Check if stopping conditions have been met
 			if i - last_i_accepted >= self.stop_after_n_unaccepted:
-				print(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
+				tqdm.write(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
 				break
 
 			if len(self.map_indices) == self.max_data_vector_length:
-				print('Maximum data vector length reached')
+				tqdm.write('Maximum data vector length reached')
 				break
 				
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
@@ -100,7 +104,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 			if self.acceptance_func(temp_compressor):
 				self.map_indices.append(new_unrav)
-				print(f'Accepting index {new_unrav}')
+				tqdm.write(f'Accepting index {new_unrav}')
 
 				last_i_accepted = i
 				
