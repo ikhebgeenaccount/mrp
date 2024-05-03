@@ -16,3 +16,4 @@ products/*
 products*/*
 emulators/
 treecorr_2pcf.out
+mprofile_*.dat
