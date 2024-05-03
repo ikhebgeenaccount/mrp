@@ -150,16 +150,23 @@ class Compressor:
 		self._build_crosscorr_matrix()
 		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix', save=save)
 
-	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, abs_value=False, logy=False):
+	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, true_value=False, logy=False):
 		fig, ax = plt.subplots()
 
-		if abs_value:
-			avg_cosmoslics = 1.
+		if true_value:
+			cosmoslics_plot = self.cosmoslics_training_set['target']
+			slics_plot = self.avg_slics_data_vector
+			slics_err_plot = self.avg_slics_data_vector_err
 		else:
-			avg_cosmoslics = self.avg_cosmoslics_data_vector
+			# Normalize by dividing by average of cosmoSLICS data vectors
+			cosmoslics_plot = self.cosmoslics_training_set['target'] / self.avg_cosmoslics_data_vector - 1
+			slics_plot = self.avg_slics_data_vector / self.avg_cosmoslics_data_vector - 1
+			slics_err_plot = self.avg_slics_data_vector_err / self.avg_cosmoslics_data_vector
 
-		# Normalize by dividing by average of cosmoSLICS data vectors
-		cosmoslics_plot = self.cosmoslics_training_set['target'] / avg_cosmoslics
+		if logy:
+			cosmoslics_plot = np.abs(cosmoslics_plot)
+			slics_plot = np.abs(slics_plot)
+			slics_err_plot = np.abs(slics_err_plot)
 
 		if include_cosmoslics:
 			ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
@@ -167,15 +174,12 @@ class Compressor:
 			ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
 
 		if include_slics:
-			slics_norm = self.avg_slics_data_vector / avg_cosmoslics
-			ax.plot(slics_norm, color='red', linewidth=3, alpha=.6, label='SLICS')
-
-			slics_err_norm = self.avg_slics_data_vector_err / avg_cosmoslics
+			ax.plot(slics_plot, color='red', linewidth=3, alpha=.6, label='SLICS')
 
 			ax.fill_between(
 				np.linspace(0, self.data_vector_length - 1, num=self.data_vector_length),
-				y1=slics_norm + slics_err_norm,
-				y2=slics_norm - slics_err_norm,
+				y1=slics_plot + slics_err_plot,
+				y2=slics_plot - slics_err_plot,
 				color='grey', alpha=.4, label='$1\sigma$ SLICS covariance'
 			)
 
@@ -183,16 +187,20 @@ class Compressor:
 			ax.semilogy()
 
 		ax.legend()
-		if abs_value:
+		if true_value:
 			ax.set_title('Data vectors')
-			ax.set_ylabel('Entry value')
+			y_label = 'Entry value'
 		else:
 			ax.set_title('Data vectors normalized with cosmoSLICS average')
-			ax.set_ylabel('Entry value / cosmoSLICS avg')
+			y_label = '(Entry value / cosmoSLICS avg) - 1'
+
+		if logy:
+			y_label = f'|{y_label}|'
 		ax.set_xlabel('Data vector entry')
+		ax.set_ylabel(y_label)
 
 		if save:
-			self._save_plot(fig, f'data_vector{"" if not abs_value else "_abs"}{"" if not logy else "_logy"}')
+			self._save_plot(fig, f'data_vector{"" if not true_value else "_abs"}{"" if not logy else "_logy"}')
 
 		return fig, ax
 	
