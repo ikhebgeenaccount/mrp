@@ -66,6 +66,15 @@ class GrowingVectorCompressor(IndexCompressor):
 		for i, new_index in enumerate(test_indices):
 			if i % 1000 == 1:
 				print(f'Analyzing {i}st index of {len(test_indices)}')
+
+			# Check if stopping conditions have been met
+			if i - last_i_accepted >= self.stop_after_n_unaccepted:
+				print(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
+				break
+
+			if len(self.map_indices) == self.max_data_vector_length:
+				print('Maximum data vector length reached')
+				break
 				
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
 			temp_map_indices = self.map_indices + [new_unrav]
@@ -91,7 +100,7 @@ class GrowingVectorCompressor(IndexCompressor):
 
 			if self.acceptance_func(temp_compressor):
 				self.map_indices.append(new_unrav)
-				self.debug(f'Accepting index {new_unrav}')
+				print(f'Accepting index {new_unrav}')
 
 				last_i_accepted = i
 				
@@ -99,16 +108,13 @@ class GrowingVectorCompressor(IndexCompressor):
 			# 	self.debug('np.linalg.LinAlgError')
 			# 	pass
 
-			if len(self.map_indices) == self.max_data_vector_length:
-				self.debug('Maximum data vector length reached')
-				break
-
-			if i - last_i_accepted >= self.stop_after_n_unaccepted:
-				self.debug(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
-				break
 
 		print('Resulting length data vector:', len(self.map_indices))
 		print('Indices:', self.map_indices)
+		print('Specifically, using:')
+		for ind in self.map_indices:
+			zbin_ind = ind[0]
+			print(f'\t{self.zbins[zbin_ind]}: {ind[1:]}')
 
 		# Set indices to be map_indices
 		self.set_indices(self.map_indices)
