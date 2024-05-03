@@ -1,6 +1,6 @@
 from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
-from analysis.persistence_diagram import BettiNumbersGrid, PersistenceDiagram
+from analysis.persistence_diagram import BaseRangedMap, BettiNumbersGrid, PersistenceDiagram
 
 import numpy as np
 from scipy.stats import moment
@@ -28,6 +28,7 @@ class IndexCompressor(Compressor):
 		}
 		for cosmdata in cosm_datas:
 			bngs = []
+			dimpair_counts = []
 			for zbin in self.zbins:
 				# Add all redshift bins' BettiNumbersGrids (both dimensions)
 				bngs.append(
@@ -35,9 +36,10 @@ class IndexCompressor(Compressor):
 					cosmdata.zbins_bngs_avg[zbin][1]._transform_map()]
 				)
 
+				dimpair_counts += list(cosmdata.dimension_pairs_count_avg[zbin])
+
 			# Turn list into numpy array for easy slicing
 			bngs_merged = np.array(bngs)
-			dimpair_counts = cosmdata.dimension_pairs_count_avg[zbin]
 			self._select_pixels(bngs_merged, dimpair_counts, training_set)
 
 			training_set['input'].append(np.array([val for key, val in cosmdata.cosm_parameters.items() if key != 'id']))
@@ -67,6 +69,7 @@ class IndexCompressor(Compressor):
 		sdata = slics_data[0]
 		for index_pd in range(slics_data[0].pds_count):
 			bngs = []
+			dimpair_counts = []
 			for zbin in self.zbins:
 				# Add all redshift bins' BettiNumbersGrids (both dimensions)
 				bngs.append([
@@ -74,9 +77,10 @@ class IndexCompressor(Compressor):
 					sdata.zbins_bngs[zbin][1][index_pd]._transform_map()]
 				)
 
+				dimpair_counts += list(sdata.zbins_dimension_pairs_counts[zbin][index_pd])
+
 			# Turn list into numpy array for easy slicing
 			bngs_merged = np.array(bngs)
-			dimpair_counts = sdata.zbins_dimension_pairs_counts[zbin][index_pd]
 			self._select_pixels(bngs_merged, dimpair_counts, training_set)
 
 			training_set['input'].append(np.array([val for key, val in sdata.cosm_parameters.items() if key != 'id']))
@@ -84,38 +88,49 @@ class IndexCompressor(Compressor):
 		return training_set
 
 	def visualize(self, save=True):
-		for dim in [0, 1]:
+		for iz, zbin in enumerate(self.zbins):
+			for dim in [0, 1]:
 
-			x_ind_dim = self.indices[self.indices[:, 0] == dim][:, 2]
-			y_ind_dim = self.indices[self.indices[:, 0] == dim][:, 1]
+				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
+				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
 
-			for attr in ['dist_powers', 'collapsed_fisher_maps']:
-				if hasattr(self, attr):
-					pix_dist_map = getattr(self, attr)[dim]
+				if hasattr(self, 'dist_powers'):
+					pix_dist_map = self.dist_powers[zbin][dim]
 
-					fig, ax = pix_dist_map.plot(title=f'{attr} dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
+					fig, ax = pix_dist_map.plot(title=f'dist_powers dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
 									scatters_are_index=True, heatmap_scatter_points=False)
 					
 					if save:
-						self._save_plot(fig, f'visualize_{attr}_dim{dim}')
+						self._save_plot(fig, f'visualize_dist_powers_zbin{zbin}_dim{dim}')
+
+				if hasattr(self, 'collapsed_fisher'):
+					r = [-.05, .05]
+					col_fish_map = BaseRangedMap(self.collapsed_fisher[iz][dim], x_range=r, y_range=r, dimension=dim, name='collapsed_fisher')
+
+					fig, ax = col_fish_map.plot(title=f'coll_fisher dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
+									scatters_are_index=True, heatmap_scatter_points=False)
+					
+					if save:
+						self._save_plot(fig, f'visualize_coll_fisher_zbin{zbin}_dim{dim}')
+
 
 				# self._add_data_vector_labels(ax, dim)
 
-			for mom in [1, 2, 3, 4]:
-				avg_bng_cosmoslics_dim = BettiNumbersGrid(
-					moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
-					birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
-					death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
-					dimension=dim
-				)
+			# for mom in [1, 2, 3, 4]:
+			# 	avg_bng_cosmoslics_dim = BettiNumbersGrid(
+			# 		moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
+			# 		birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
+			# 		death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
+			# 		dimension=dim
+			# 	)
 
-				fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
-								scatters_are_index=True)
-				# self._add_data_vector_labels(ax, dim)
-				ax.set_title(f'dim={dim}, moment={mom}')
+			# 	fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
+			# 					scatters_are_index=True)
+			# 	# self._add_data_vector_labels(ax, dim)
+			# 	ax.set_title(f'dim={dim}, moment={mom}')
 
-				if save:
-					self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
+			# 	if save:
+			# 		self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
 
 	def _add_data_vector_labels(self, ax, dim):
 		if dim == 0:
