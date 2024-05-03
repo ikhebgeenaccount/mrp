@@ -94,14 +94,14 @@ class Compressor:
 	
 	def _calculate_fisher_matrix(self):
 		self.fisher_matrix = np.zeros((self.input_vector_length, self.input_vector_length))
-		self.fisher_matrix_per_entry = np.zeros((self.input_vector_length, self.input_vector_length, self.data_vector_length))
+		# self.fisher_matrix_per_entry = np.zeros((self.input_vector_length, self.input_vector_length, self.data_vector_length))
 		slics_variance = np.diag(self.slics_covariance_matrix)
 		
 		for i in range(self.input_vector_length):
 			for j in range(self.input_vector_length):
 				# TODO: add variance
 				s = self.lsq_sols[:, i] * self.lsq_sols[:, j] / slics_variance
-				self.fisher_matrix_per_entry[j, i] = s
+				# self.fisher_matrix_per_entry[j, i] = s
 				self.fisher_matrix[j, i] = np.sum(s[np.isfinite(s)])
 				# self.fisher_matrix[j, i] = np.sum(self.lsq_sols[:, i] * self.lsq_sols[:, j])
 
