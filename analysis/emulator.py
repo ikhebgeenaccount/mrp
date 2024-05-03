@@ -53,8 +53,6 @@ class Emulator:
 
 		for i, (train_index, test_index) in enumerate(loo.split(self.training_set['scaled_input'])):
 			temp_regr = self.regressor_type(**self.regressor_args)
-			print(self.training_set['input'][train_index].shape)
-			print(self.training_set['target'][train_index].shape)
 			temp_regr.fit(self.training_set['input'][train_index], self.training_set['target'][train_index])
 
 			# Not np.abs to also get negative error
@@ -62,10 +60,6 @@ class Emulator:
 			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['scaled_input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			all_mse.append(mse)
-			print(f'######### TEST INDEX {test_index} ######### (input: {self.training_set["input"][test_index]})')
-			print('target\t\tpred\t\tfrac err')
-			for j, _ in enumerate(mse):
-				print(f"{self.training_set['target'][test_index][0][j]:.4e}\t{temp_regr.predict(self.training_set['input'][test_index])[0][j]:.4e}\t{mse[j]:.4e}\t")
 
 		avg_mse = np.nanmean(all_mse, axis=0)
 
