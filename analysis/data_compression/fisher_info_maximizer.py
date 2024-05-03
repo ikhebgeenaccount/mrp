@@ -13,21 +13,25 @@ from analysis.persistence_diagram import PersistenceDiagram, PixelDistinguishing
 class FisherInfoMaximizer(GrowingVectorCompressor):
 
 	def __init__(self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData], data_vector_length, 
-			  fisher_info_increase:float=0.05, minimum_crosscorr_det: float=1e-5, minimum_feature_count: float=0, verbose=False):
+			  fisher_info_increase:float=0.05, minimum_crosscorr_det: float=1e-5, minimum_feature_count: float=0,
+			  add_feature_count=False, stop_after_n_unaccepted=np.inf,
+			  verbose=False
+		):
 		self.data_vector_length = data_vector_length
 
 		full_grid = FullGrid(cosmoslics_datas, slics_data)
 
 		# Sort full_grid by fisher info
 		# Minus to make argsort descending order
-		collapsed_fisher = np.reshape(np.max(-full_grid.fisher_matrix_per_entry, axis=(0, 1)), (len(slics_data[0].zbins_pds), 2, 100, 100))
+		self.collapsed_fisher = np.reshape(np.max(-full_grid.fisher_matrix_per_entry, axis=(0, 1)), (len(slics_data[0].zbins_pds), 2, 100, 100))
 
 		self.fisher_info_increase = fisher_info_increase
 		self.prev_fisher_info = 0.
 		self.fisher_info_vals = []
 
-		super().__init__(cosmoslics_datas, slics_data, pixel_scores=collapsed_fisher, max_data_vector_length=data_vector_length,
-			minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, verbose=verbose)
+		super().__init__(cosmoslics_datas, slics_data, pixel_scores=self.collapsed_fisher, max_data_vector_length=data_vector_length,
+			minimum_feature_count=minimum_feature_count, minimum_crosscorr_det=minimum_crosscorr_det, stop_after_n_unaccepted=stop_after_n_unaccepted,
+			add_feature_count=add_feature_count, verbose=verbose)
 
 	def acceptance_func(self, compressor: Compressor):
 		new_fisher_info = compressor.fisher_matrix[1, 1]
