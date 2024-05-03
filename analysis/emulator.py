@@ -65,7 +65,7 @@ class Emulator:
 		rcv = RandomizedSearchCV()
 		pass
 
-	def create_loocv_plot(self, avg_mse, all_mse, plot_cov=True):
+	def create_loocv_plot(self, avg_mse, all_mse, plot_cov=True, logy=False):
 		fig, ax = plt.subplots()
 		ax.set_title(f'{self.training_set["name"]} after LOOCV')
 		ax.set_xlabel('Data vector entry')
@@ -104,7 +104,7 @@ class Emulator:
 
 		index_range = index_ranges[index]
 
-		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, abs_value=False)
+		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, true_value=False)
 
 		param_values = np.linspace(*index_range, index_preds)
 
@@ -126,7 +126,7 @@ class Emulator:
 		cbar.ax.axhline(self.compressor.slics_training_set['input'][0][index], color='black', linestyle='dotted')
 
 		for i, pred in enumerate(predictions):
-			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector, c=cmap(norm(param_values[i])))
+			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector - 1., c=cmap(norm(param_values[i])))
 
 		if save:
 			fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_{index_names[index]}.png')
@@ -191,8 +191,8 @@ class PerFeatureEmulator(Emulator):
 	"""
 	Instead of having one GPR for the whole data vector, we have one for each entry."""
 
-	def __init__(self, regressor_type, compressor):
-		super().__init__(GaussianProcessRegressor, compressor=compressor, normalize_y=True)
+	def __init__(self, regressor_type, compressor, **regressor_kwargs):
+		super().__init__(regressor_type, compressor=compressor, **regressor_kwargs)
 
 		# Create an emulator for each entry in the target data vector
 		self.regressors = [regressor_type(**self.regressor_args) for _ in self.training_set['target'][0]]
@@ -235,4 +235,4 @@ class PerFeatureEmulator(Emulator):
 class PerFeatureGPREmulator(PerFeatureEmulator):
 
 	def __init__(self, compressor: Compressor):
-		super().__init__(GaussianProcessRegressor, compressor=compressor)
+		super().__init__(GaussianProcessRegressor, compressor=compressor, normalize_y=True)
