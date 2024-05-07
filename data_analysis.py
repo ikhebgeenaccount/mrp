@@ -27,7 +27,7 @@ from analysis.persistence_diagram import PersistenceDiagram
 from analysis.persistence_diagram import BettiNumbersGridVarianceMap, PixelDistinguishingPowerMap
 import analysis.cosmologies as cosmologies
 from analysis.emulator import GPREmulator, MLPREmulator, PerFeatureGPREmulator
-from analysis.data_compression.chi_squared_minimizer import ChiSquaredMinimizer
+from analysis.data_compression.chi_squared_maximizer import ChiSquaredMaximizer
 from analysis.data_compression.full_grid import FullGrid
 from analysis.pipeline import Pipeline
 
@@ -73,7 +73,7 @@ def load_datas(dir):
 
 def create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
 	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMinimizer(
+	chisqmin = ChiSquaredMaximizer(
 		cosmoslics_datas, slics_data, dist_powers, max_data_vector_length=100, 
 		minimum_feature_count=50, chisq_increase=chisq_increase, minimum_crosscorr_det=minimum_crosscorr_det,
 		add_feature_count=True,
