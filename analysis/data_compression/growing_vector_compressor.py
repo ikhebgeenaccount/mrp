@@ -6,7 +6,7 @@ from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.criteria.criterium import Criterium
 from analysis.data_compression.index_compressor import IndexCompressor
-from analysis.persistence_diagram import PersistenceDiagram
+from analysis.persistence_diagram import BaseRangedMap, PersistenceDiagram
 from utils.is_notebook import is_notebook
 
 if is_notebook():
@@ -141,7 +141,7 @@ class GrowingVectorCompressor(IndexCompressor):
 	def _finalize_build(self, cosm_datas):
 		self.set_indices(self.map_indices)
 		tset = super()._build_training_set(cosm_datas)
-		tset['name'] = 'growing_vector_comp'
+		tset['name'] = f'{type(self).__name__}_{type(self.criterium).__name__}'
 		return tset
 
 	def _print_result(self):
@@ -151,3 +151,21 @@ class GrowingVectorCompressor(IndexCompressor):
 		for ind in self.map_indices:
 			zbin_ind = ind[0]
 			print(f'\t{self.zbins[zbin_ind]}: {ind[1:]}')
+
+	def visualize(self, save=True):
+		for iz, zbin in enumerate(self.zbins):
+			for dim in [0, 1]:
+
+				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
+				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
+
+				if hasattr(self, 'pixel_scores'):
+					r = [-.05, .05]
+					col_fish_map = BaseRangedMap(self.collapsed_fisher[iz][dim], x_range=r, y_range=r, dimension=dim, name='pixel_scores')
+
+					fig, ax = col_fish_map.plot(title=f'pixel_scores dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
+									scatters_are_index=True, heatmap_scatter_points=False)
+					
+					if save:
+						self._save_plot(fig, f'visualize_pixel_scores_zbin{zbin}_dim{dim}')
+		return super().visualize(save)

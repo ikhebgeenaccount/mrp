@@ -94,43 +94,21 @@ class IndexCompressor(Compressor):
 				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
 				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
 
-				if hasattr(self, 'dist_powers'):
-					pix_dist_map = self.dist_powers[zbin][dim]
+				# for mom in [1, 2, 3, 4]:
+				# 	avg_bng_cosmoslics_dim = BettiNumbersGrid(
+				# 		moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
+				# 		birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
+				# 		death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
+				# 		dimension=dim
+				# 	)
 
-					fig, ax = pix_dist_map.plot(title=f'dist_powers dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
-									scatters_are_index=True, heatmap_scatter_points=False)
-					
-					if save:
-						self._save_plot(fig, f'visualize_dist_powers_zbin{zbin}_dim{dim}')
+				# 	fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
+				# 					scatters_are_index=True)
+				# 	# self._add_data_vector_labels(ax, dim)
+				# 	ax.set_title(f'dim={dim}, moment={mom}')
 
-				if hasattr(self, 'collapsed_fisher'):
-					r = [-.05, .05]
-					col_fish_map = BaseRangedMap(self.collapsed_fisher[iz][dim], x_range=r, y_range=r, dimension=dim, name='collapsed_fisher')
-
-					fig, ax = col_fish_map.plot(title=f'coll_fisher dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
-									scatters_are_index=True, heatmap_scatter_points=False)
-					
-					if save:
-						self._save_plot(fig, f'visualize_coll_fisher_zbin{zbin}_dim{dim}')
-
-
-				# self._add_data_vector_labels(ax, dim)
-
-			# for mom in [1, 2, 3, 4]:
-			# 	avg_bng_cosmoslics_dim = BettiNumbersGrid(
-			# 		moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
-			# 		birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
-			# 		death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
-			# 		dimension=dim
-			# 	)
-
-			# 	fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
-			# 					scatters_are_index=True)
-			# 	# self._add_data_vector_labels(ax, dim)
-			# 	ax.set_title(f'dim={dim}, moment={mom}')
-
-			# 	if save:
-			# 		self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
+				# 	if save:
+				# 		self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
 
 	def _add_data_vector_labels(self, ax, dim):
 		if dim == 0:
