@@ -4,6 +4,7 @@ import numpy as np
 
 from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
+from analysis.data_compression.criteria.criterium import Criterium
 from analysis.data_compression.index_compressor import IndexCompressor
 from analysis.persistence_diagram import PersistenceDiagram
 from utils.is_notebook import is_notebook
@@ -17,18 +18,32 @@ else:
 class GrowingVectorCompressor(IndexCompressor):
 
 	def __init__(
-			self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData], pixel_scores: np.ndarray,
+			self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData],
+			criterium: Criterium,
 			max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5,
 			stop_after_n_unaccepted: float=np.inf, add_feature_count=False, verbose=False
 		):
 		self.map_indices = None
-		self.pixel_scores = pixel_scores
+
+		self.criterium = criterium
+		self.pixel_scores = criterium.pixel_scores()
 		self.pixel_scores_shape = self.pixel_scores.shape
-		self.pixel_scores_argsort = np.argsort(self.pixel_scores, axis=None)[::-1]
 
 		self.max_data_vector_length = max_data_vector_length
 
 		self.minimum_feature_count = minimum_feature_count
+		self.min_crosscorr_det = minimum_crosscorr_det
+
+		self.stop_after_n_unaccepted = stop_after_n_unaccepted
+
+		self.verbose = verbose
+
+		self._setup_test_indices(cosmoslics_datas, slics_data)
+
+		super().__init__(cosmoslics_datas, slics_data, indices=[], add_feature_count=add_feature_count)
+
+	def _setup_test_indices(self, cosmoslics_datas, slics_data):
+		self.pixel_scores_argsort = np.argsort(self.pixel_scores, axis=None)[::-1]
 		# We need to be able to filter which indices have > minimum_feature_count
 		# So, we build one large array of (cosmologies, zbins, dim, bng_resolution, bng_resolution)
 		# Then, we can np.max over axis=0 (cosmologies) to find which pixels adhere to > minimum_feature_count
@@ -47,39 +62,25 @@ class GrowingVectorCompressor(IndexCompressor):
 		self.start_index = i
 		print('First index', np.unravel_index(self.pixel_scores_argsort[self.start_index], self.pixel_scores_shape))
 
-		self.min_crosscorr_det = minimum_crosscorr_det
-
-		self.stop_after_n_unaccepted = stop_after_n_unaccepted
-
-		self.verbose = verbose
-
-		super().__init__(cosmoslics_datas, slics_data, indices=[], add_feature_count=add_feature_count)
-
-	def acceptance_func(self, compressor: Compressor):
-		raise NotImplementedError('Subclasses of GrowingVectorCompressor must implement acceptance_func')
+		# Build set of indices to test
+		self.test_indices = self.pixel_scores_argsort[self.start_index:]
+	
+	def _get_test_indices(self):
+		for ind in self.test_indices:
+			yield ind
 
 	def _build_training_set(self, cosm_datas: List[CosmologyData]):
 		if self.map_indices is not None:
 			return super()._build_training_set(cosm_datas)
 
-		# Build set of indices to test
-		test_indices = self.pixel_scores_argsort[self.start_index:]
-
 		self.map_indices = []
 
-		last_i_accepted = 0
+		self.last_i_accepted = 0
 
-		for i, new_index in enumerate(tqdm(test_indices, leave=False)):
-
-			# Check if stopping conditions have been met
-			if i - last_i_accepted >= self.stop_after_n_unaccepted:
-				tqdm.write(f'Last accepted index {last_i_accepted}, current index {i}, stopping')
+		for i, new_index in enumerate(tqdm(self._get_test_indices(), leave=False)):
+			if self._check_stopping_conditions(i):
 				break
-
-			if len(self.map_indices) == self.max_data_vector_length:
-				tqdm.write('Maximum data vector length reached')
-				break
-				
+							
 			new_unrav = np.unravel_index(new_index, self.pixel_scores_shape)
 			temp_map_indices = self.map_indices + [new_unrav]
 
@@ -97,31 +98,56 @@ class GrowingVectorCompressor(IndexCompressor):
 
 			temp_compressor = IndexCompressor(self.cosmoslics_datas, self.slics_data, temp_map_indices)
 
-			temp_compressor._build_crosscorr_matrix()
-			if np.linalg.det(temp_compressor.slics_crosscorr_matrix) < self.min_crosscorr_det:
-				self.debug('Minimum correlation det not reached')
+			if not self._test_corr_det(temp_compressor):
 				continue
 
-			if self.acceptance_func(temp_compressor):
-				self.map_indices.append(new_unrav)
-				tqdm.write(f'Accepting index {new_unrav}')
-
-				last_i_accepted = i
+			if self.criterium.acceptance_func(temp_compressor):
+				self._accept_index(i, new_unrav)
 				
 			# except np.linalg.LinAlgError:
 			# 	self.debug('np.linalg.LinAlgError')
 			# 	pass
 
+		self._print_result()
 
+		# Set indices to be map_indices
+		return self._finalize_build(cosm_datas)
+	
+	def _test_corr_det(self, compressor: Compressor):
+		compressor._build_crosscorr_matrix()
+		if np.linalg.det(compressor.slics_crosscorr_matrix) < self.min_crosscorr_det:
+			self.debug('Minimum correlation det not reached')
+			return False
+		return True	
+
+	def _check_stopping_conditions(self, i):
+		# Check if stopping conditions have been met
+		if i - self.last_i_accepted >= self.stop_after_n_unaccepted:
+			tqdm.write(f'Last accepted index {self.last_i_accepted}, current index {i}, stopping')
+			return True
+
+		if len(self.map_indices) == self.max_data_vector_length:
+			tqdm.write('Maximum data vector length reached')
+			return True
+		
+		return False
+		
+	def _accept_index(self, i, acc_index):		
+		self.map_indices.append(acc_index)
+		tqdm.write(f'Accepting index {i}: {acc_index}')
+
+		self.last_i_accepted = i
+
+	def _finalize_build(self, cosm_datas):
+		self.set_indices(self.map_indices)
+		tset = super()._build_training_set(cosm_datas)
+		tset['name'] = 'growing_vector_comp'
+		return tset
+
+	def _print_result(self):
 		print('Resulting length data vector:', len(self.map_indices))
 		print('Indices:', self.map_indices)
 		print('Specifically, using:')
 		for ind in self.map_indices:
 			zbin_ind = ind[0]
 			print(f'\t{self.zbins[zbin_ind]}: {ind[1:]}')
-
-		# Set indices to be map_indices
-		self.set_indices(self.map_indices)
-		tset = super()._build_training_set(cosm_datas)
-		tset['name'] = 'growing_vector_comp'
-		return tset
