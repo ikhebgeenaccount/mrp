@@ -158,14 +158,13 @@ class GrowingVectorCompressor(IndexCompressor):
 
 				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
 				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
+				
+				r = [-.05, .05]
+				pix_sc_map = BaseRangedMap(self.pixel_scores[iz][dim], x_range=r, y_range=r, dimension=dim, name='pixel_scores')
 
-				if hasattr(self, 'pixel_scores'):
-					r = [-.05, .05]
-					col_fish_map = BaseRangedMap(self.collapsed_fisher[iz][dim], x_range=r, y_range=r, dimension=dim, name='pixel_scores')
-
-					fig, ax = col_fish_map.plot(title=f'pixel_scores dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
-									scatters_are_index=True, heatmap_scatter_points=False)
-					
-					if save:
-						self._save_plot(fig, f'visualize_pixel_scores_zbin{zbin}_dim{dim}')
+				fig, ax = pix_sc_map.plot(title=f'pixel_scores dim={dim}', scatter_points=[x_ind_dim, y_ind_dim],
+								scatters_are_index=True, heatmap_scatter_points=False)
+				
+				if save:
+					self._save_plot(fig, f'visualize_pixel_scores_zbin{zbin}_dim{dim}')
 		return super().visualize(save)
