@@ -18,17 +18,14 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.preprocessing import StandardScaler
 
 from analysis.data_compression.compressor import Compressor
-from analysis.data_compression.fisher_info_maximizer import FisherInfoMaximizer
-from analysis.data_compression.index_compressor import IndexCompressor
-from analysis.mcmc import MCMC
-import trial
-from analysis.map import Map
-from analysis.persistence_diagram import PersistenceDiagram
-from analysis.persistence_diagram import BettiNumbersGridVarianceMap, PixelDistinguishingPowerMap
-import analysis.cosmologies as cosmologies
-from analysis.emulator import GPREmulator, MLPREmulator, PerFeatureGPREmulator
-from analysis.data_compression.chi_squared_maximizer import ChiSquaredMaximizer
 from analysis.data_compression.full_grid import FullGrid
+from analysis.data_compression.growing_vector_compressor import GrowingVectorCompressor
+from analysis.data_compression.index_compressor import IndexCompressor
+from analysis.data_compression.criteria.chi_squared import ChiSquared
+from analysis.data_compression.criteria.fisher_information import FisherInformation
+from analysis.mcmc import MCMC
+import analysis.cosmologies as cosmologies
+from analysis.emulator import GPREmulator, PerFeatureGPREmulator
 from analysis.pipeline import Pipeline
 
 from utils.file_system import check_folder_exists
@@ -71,50 +68,29 @@ def load_datas(dir):
 	return slics_data, cosmoslics_datas, dist_powers
 
 
-def create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
-	print('Compressing data with ChiSquaredMinimizer...')
-	chisqmin = ChiSquaredMaximizer(
-		cosmoslics_datas, slics_data, dist_powers, max_data_vector_length=100, 
-		minimum_feature_count=50, chisq_increase=chisq_increase, minimum_crosscorr_det=minimum_crosscorr_det,
+def create_comp(slics_data, cosmoslics_datas, criterium, minimum_crosscorr_det, plots_dir='plots'):
+	print(f'Compressing data with GrowingVectorCompressor and {type(criterium).__name__}...')
+	comp = GrowingVectorCompressor(
+		cosmoslics_datas, slics_data, 
+		criterium=criterium,
+		max_data_vector_length=100, 
+		minimum_feature_count=50, 
+		minimum_crosscorr_det=minimum_crosscorr_det,
 		add_feature_count=True,
 		verbose=False
 	)
 
 	check_folder_exists(plots_dir)
-	chisqmin.plots_dir = plots_dir
+	comp.plots_dir = plots_dir
 
 	print('Plotting ChiSquaredMinimizer matrices and data vector...')
-	chisqmin.plot_fisher_matrix()
-	chisqmin.plot_correlation_matrix()
-	chisqmin.plot_covariance_matrix()
-	chisqmin.plot_data_vectors(include_slics=True)
+	comp.plot_fisher_matrix()
+	comp.plot_correlation_matrix()
+	comp.plot_covariance_matrix()
+	comp.plot_data_vectors(include_slics=True)
 	# chisqmin.visualize()
 
-	return chisqmin
-
-
-def create_fishinfo_comp(slics_data, cosmoslics_datas, dist_powers, fishinfo_increase, minimum_crosscorr_det=.1, plots_dir='plots'):
-	print('Compressing data with FisherInfoMaximizer...')
-	fishinfo = FisherInfoMaximizer(
-		cosmoslics_datas, slics_data, data_vector_length=100, 
-		minimum_feature_count=50, fisher_info_increase=fishinfo_increase, minimum_crosscorr_det=minimum_crosscorr_det,
-		add_feature_count=True,
-		verbose=False
-	)
-
-	check_folder_exists(plots_dir)
-	fishinfo.plots_dir = plots_dir
-
-	print('Plotting FisherInfoMaximizer matrices and data vector...')
-	fishinfo.plot_fisher_matrix()
-	fishinfo.plot_correlation_matrix()
-	fishinfo.plot_covariance_matrix()
-	fishinfo.plot_data_vectors(include_slics=True)
-
-	fishinfo.dist_powers = dist_powers
-	# fishinfo.visualize()
-
-	return fishinfo
+	return comp
 
 
 def create_emulator(compressor, save_name_addition=None, plots_dir='plots'):
@@ -197,16 +173,6 @@ def run_mcmc(emulator, data_vector, p0, nwalkers=100, burn_in_steps=100, nsteps=
 		fig.savefig(os.path.join(plots_dir, 'chains.png'))
 
 
-def short_test():
-	slics_pds, cosmoslics_pds, dist_powers = read_maps(filter_region=1)
-
-	chisq = create_chisq_comp(slics_pds, cosmoslics_pds, dist_powers, .1, .1, plots_dir='plots/chisq')
-	fishin = create_fishinfo_comp(slics_pds, cosmoslics_pds, dist_powers, .05, plots_dir='plots/fishinfo')
-
-	create_emulator(chisq, plots_dir='plots/chisq')
-	create_emulator(fishin, plots_dir='plots/fishinfo')
-
-
 def test_hyperparameters():
 	res = {
 		'type': [],  # chisq or fisherinfo, type of compressor
@@ -263,7 +229,11 @@ def test_hyperparameters():
 		for chisq_inc in [.01, .1, .2, .5]:
 			plots_dir = f'{base_plots_dir}/plots_det{min_det:.1e}_chisq{chisq_inc}'
 			check_folder_exists(plots_dir)
-			c = create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_inc, min_det, plots_dir=plots_dir)
+			c = create_comp(
+				slics_data, cosmoslics_datas, 
+				ChiSquared(slics_data, dist_powers, chisq_inc), 
+				min_det, plots_dir=plots_dir
+			)
 
 			c.plot_data_vectors(save=True, include_slics=True, logy=True, true_value=False)
 
@@ -276,7 +246,10 @@ def test_hyperparameters():
 		for fishinfo_inc in [.005, .02, .05, .1]:
 			plots_dir = f'{base_plots_dir}/plots_det{min_det:.1e}_fishinfo{fishinfo_inc}'
 			check_folder_exists(plots_dir)
-			c = create_fishinfo_comp(slics_data, cosmoslics_datas, dist_powers, fishinfo_inc, min_det, plots_dir=plots_dir)
+			c = create_comp(
+				slics_data, cosmoslics_datas, 
+				FisherInformation(cosmoslics_datas, slics_data, fishinfo_inc), 
+				min_det, plots_dir=plots_dir)
 
 			c.plot_data_vectors(save=True, include_slics=True, logy=True, true_value=False)
 
@@ -334,8 +307,11 @@ if __name__ == '__main__':
 		else:
 			print(f'Loading cosmology datas from {args.cosm_data_dir}')
 			slics_data, cosmoslics_datas, dist_powers = load_datas(args.cosm_data_dir)
+
+		chisq_crit = ChiSquared(slics_data, dist_powers, chisq_increase=.1)
+		fishinfo_crit = FisherInformation(cosmoslics_datas, slics_data, fisher_info_increase=.05)
 		# comp = create_chisq_comp(slics_data, cosmoslics_datas, dist_powers, chisq_increase=0.1, minimum_crosscorr_det=0.1, plots_dir=args.plots_dir)
-		comp = create_fishinfo_comp(slics_data, cosmoslics_datas, dist_powers, fishinfo_increase=0.05, minimum_crosscorr_det=0.1, plots_dir=args.plots_dir)
+		comp = create_comp(slics_data, cosmoslics_datas, criterium=chisq_crit, minimum_crosscorr_det=0.1, plots_dir=args.plots_dir)
 		emu = create_emulator(comp, plots_dir=args.plots_dir)
 	else:
 		print('Loading pickle file', args.pickle_path)
