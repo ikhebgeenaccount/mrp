@@ -88,27 +88,28 @@ class IndexCompressor(Compressor):
 		return training_set
 
 	def visualize(self, save=True):
+		r = [-.05, .05]
 		for iz, zbin in enumerate(self.zbins):
 			for dim in [0, 1]:
 
 				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
 				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
 
-				# for mom in [1, 2, 3, 4]:
-				# 	avg_bng_cosmoslics_dim = BettiNumbersGrid(
-				# 		moment([cpd.betti_numbers_grids[dim].map for cpd in self.cosmoslics_pds], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
-				# 		birth_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].x_range,
-				# 		death_range=self.cosmoslics_pds[0].betti_numbers_grids[dim].y_range,
-				# 		dimension=dim
-				# 	)
+				for mom in [1, 2, 3, 4]:
+					avg_bng_cosmoslics_dim = BettiNumbersGrid(
+						moment([csd.zbins_bngs_avg[zbin][dim] for csd in self.cosmoslics_datas], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
+						birth_range=r,
+						death_range=r,
+						dimension=dim
+					)
 
-				# 	fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
-				# 					scatters_are_index=True)
-				# 	# self._add_data_vector_labels(ax, dim)
-				# 	ax.set_title(f'dim={dim}, moment={mom}')
+					fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
+									scatters_are_index=True)
+					# self._add_data_vector_labels(ax, dim)
+					ax.set_title(f'{zbin}, dim={dim}, moment={mom}')
 
-				# 	if save:
-				# 		self._save_plot(fig, f'visualize_dim{dim}_mom{mom}')
+					if save:
+						self._save_plot(fig, f'visualize_{zbin}_dim{dim}_mom{mom}')
 
 	def _add_data_vector_labels(self, ax, dim):
 		if dim == 0:
