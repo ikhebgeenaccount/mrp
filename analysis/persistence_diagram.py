@@ -21,6 +21,9 @@ class PersistenceDiagram:
 			self.cosmology = cosmology
 			self.cosmology_id = None
 
+		self.zbin = maps[0].zbin
+		self.los = maps[0].los
+
 		# if len(maps) == 1:
 		# 	# Save the line of sight discriminator if we only have one map
 		# 	if hasattr(maps[0], 'filename_without_folder'):
@@ -33,15 +36,20 @@ class PersistenceDiagram:
 		# 	self.product_loc = os.path.join(products_dir, 'persistence_diagrams', self.cosmology)
 		# 	self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', self.cosmology)
 
-		self.product_loc = os.path.join(products_dir, 'persistence_diagrams', maps[0].zbin, f'Cosmol{maps[0].cosmology_id}', f'LOS{maps[0].los}')
-		self.plot_loc = os.path.join(plots_dir, 'persistence_diagrams', maps[0].zbin, f'Cosmol{maps[0].cosmology_id}', f'LOS{maps[0].los}')
-
-		file_system.check_folder_exists(self.product_loc)
+		self.set_products_loc(products_dir)
+		self.set_plots_loc(plots_dir)
 
 		self.cosm_parameters_full = cosmologies.get_cosmological_parameters(self.cosmology_id).to_dict('records')[0]
 		self.cosm_parameters = cosmologies.get_cosmological_parameters(self.cosmology_id)[['id', 'Omega_m', 'S_8', 'h', 'w_0']].to_dict('records')[0]
 
 		self.handle_maps(maps, do_delete_maps)
+
+	def set_plots_loc(self, plots_loc):
+		self.plot_loc = os.path.join(plots_loc, 'persistence_diagrams', self.zbin, f'Cosmol{self.cosmology_id}', f'LOS{self.los}')
+
+	def set_products_loc(self, products_loc):
+		self.product_loc = os.path.join(products_loc, 'persistence_diagrams', self.zbin, f'Cosmol{self.cosmology_id}', f'LOS{self.los}')
+		file_system.check_folder_exists(self.product_loc)
 
 	def handle_maps(self, maps, do_delete_maps):
 		self.maps_count = len(maps)
@@ -117,26 +125,27 @@ class PersistenceDiagram:
 		# Scatter each dimension separately
 		if new_ax:
 			fig, ax = plt.subplots()
-		ax.set_xlabel('Birth')
-		ax.set_ylabel('Death')
+		ax.set_xlabel('Birth threshold $\kappa$')
+		ax.set_ylabel('Death threshold $\kappa$')
 		for dimension in self.dimension_pairs:
 			# Turn into np array for easy slicing
 			pairs = self.dimension_pairs[dimension]
 
 			# ax.scatter(pairs[np.isfinite(np.linalg.norm(pairs, axis=1)), 0], pairs[np.isfinite(np.linalg.norm(pairs, axis=1)), 1], label=f'{dimension}', s=3)
-			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'{dimension}', **plot_args)
+			ax.scatter(pairs[:, 0], pairs[:, 1], label=f'Dgm$_{dimension}$', **plot_args)
 		
 		ax.legend()
-		lim = 0.06
+		lim = 0.05
 		ax.set_ylim(ymin=-lim, ymax=lim)
 		ax.set_xlim(xmin=-lim, xmax=lim)
 
 		eq_line = np.linspace(-lim, lim, 2)
 		ax.plot(eq_line, eq_line, linestyle='--', color='grey')
 
-		ax.set_title(self.cosmology)
+		# ax.set_title(self.cosmology)
 		file_system.check_folder_exists(os.path.join(self.plot_loc))
-		fig.savefig(os.path.join(self.plot_loc, f'{self.cosmology}.png'))
+		fig.tight_layout()
+		fig.savefig(os.path.join(self.plot_loc, 'persistence_diagram.pdf'))
 
 		if not new_ax:
 			return
@@ -353,10 +362,11 @@ class BaseRangedMap:
 		elif axis == 'y':
 			return np.linspace(*self.y_range, num=len(self.map))
 		
-	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False):
+	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False, cbar_label='$\kappa$'):
 		fig, ax = plt.subplots()
 		imax = ax.imshow(self._transform_map(), aspect='equal', extent=(*self.x_range, *self.y_range))
-		fig.colorbar(imax)
+		cbar = fig.colorbar(imax)
+		cbar.set_label(cbar_label)
 
 		if scatter_points is not None:
 			c = 'red' if not heatmap_scatter_points else np.arange(0, len(scatter_points[0]), step=1)
@@ -371,17 +381,21 @@ class BaseRangedMap:
 		if title is not None:
 			ax.set_title(title)
 
+		ax.set_xlabel('Birth threshold $\kappa$')
+		ax.set_ylabel('Death threshold $\kappa$')
+
 		return fig, ax
 
 	def save_figure(self, path, scatter_points=None, title=None, save_name=None):
 		file_system.check_folder_exists(path)
 		
 		fig, ax = self.plot(scatter_points, title)
+		fig.tight_layout()
 
 		if save_name is None:
-			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.png'))
+			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}.pdf'))
 		else:
-			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}_{save_name}.png'))
+			fig.savefig(os.path.join(path, f'{self.name}_{self.dimension}_{save_name}.pdf'))
 		plt.close(fig)
 
 	def _transform_map(self):
@@ -405,6 +419,9 @@ class BettiNumbersGrid(BaseRangedMap):
 	def _transform_map(self):
 		return self.map[::-1, :]
 	
+	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False):
+		return super().plot(scatter_points, title, scatters_are_index, heatmap_scatter_points, cbar_label=f'Normalized $\\beta_{self.dimension}(t_b, t_d)$')
+	
 
 class BettiNumbersGridVarianceMap(BaseRangedMap):
 
@@ -425,6 +442,9 @@ class BettiNumbersGridVarianceMap(BaseRangedMap):
 
 	def _transform_map(self):
 		return self.map[::-1, :]
+	
+	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False):
+		return super().plot(scatter_points, title, scatters_are_index, heatmap_scatter_points, cbar_label='$\sigma$')
 
 
 class PixelDistinguishingPowerMap(BaseRangedMap):
@@ -446,3 +466,6 @@ class PixelDistinguishingPowerMap(BaseRangedMap):
 
 	def _transform_map(self):
 		return self.map[::-1, :]
+	
+	def plot(self, scatter_points=None, title=None, scatters_are_index=False, heatmap_scatter_points=False):
+		return super().plot(scatter_points, title, scatters_are_index, heatmap_scatter_points, cbar_label='$\sigma$')

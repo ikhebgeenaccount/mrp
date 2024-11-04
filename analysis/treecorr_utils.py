@@ -34,4 +34,4 @@ def plot_correlation_function(df):
 	ax.semilogx()	
 	ax.axhline(xmin=0, xmax=1, y=0., color='black', linestyle='--')
 
-	fig.savefig(os.path.join('plots', f'2pt_correlation_func_treecorr.png'))
+	fig.savefig(os.path.join('plots', f'2pt_correlation_func_treecorr.pdf'))

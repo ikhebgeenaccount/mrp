@@ -59,7 +59,7 @@ def try_transforms_and_plot(pds):
 			# ax.set_ylim(ymin=-0.005, ymax=0.06)
 			ax.set_ylabel(name)
 
-			fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{new_pd.cosmology}.png'))
+			fig.savefig(os.path.join('plots', 'persistence_diagrams', f'{new_pd.cosmology}.pdf'))
 
 			# Make Jointplot for dim 0, 1 separately
 			for dim in [0, 1]:

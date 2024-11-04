@@ -240,7 +240,7 @@ class Pipeline:
 			else:
 				# Put it in a list to make our live easier when compressing
 				# By making both cosmoslics_datas and slics_data a list, we can handle them the same in Compressor._build_training_set
-				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins, n_cosmoslics_los=len(self.cosmoslics_los))]
+				self.slics_data = [CosmologyData(cosmology, curr_cosm_zbins, n_cosmoslics_los=len(curr_zbin_pds))]
 
 		self.zbins = list(self.slics_data[0].zbins_pds.keys())
 

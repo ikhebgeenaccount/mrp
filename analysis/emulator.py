@@ -48,7 +48,7 @@ class Emulator:
 			temp_regr.fit(self.training_set['input'][train_index], self.training_set['target'][train_index])
 
 			# Not np.abs to also get negative error
-			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['input'][test_index])[0]) / self.training_set['target'][test_index][0]
+			mse = (self.training_set['target'][test_index][0] - temp_regr.predict(self.training_set['input'][test_index])[0])
 			# mse = np.square((self.training_set['target'][test_index][0] - self.regressor.predict(self.training_set['input'][test_index])[0]) / self.training_set['target'][test_index][0])
 
 			all_mse.append(mse)
@@ -65,27 +65,46 @@ class Emulator:
 		rcv = RandomizedSearchCV()
 		pass
 
+	def _save_plot(self, fig, save_name):
+		fig.tight_layout()
+		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_{save_name}.pdf')
+		plt.close(fig)
+
 	def create_loocv_plot(self, avg_mse, all_mse, plot_cov=True, logy=False):
-		fig, ax = plt.subplots()
-		ax.set_title(f'{self.training_set["name"]} after LOOCV')
+		fig, axs = self.compressor.plot_data_vectors(include_slics=False, include_cosmoslics=False, save=False)
+
+		nrows = fig.axes[0].get_subplotspec().get_topmost_subplotspec().get_gridspec().nrows
+
+		for row_id in range(nrows):
+			if nrows == 1:
+				ax = axs
+			else:
+				ax = axs[row_id]
+
+			vector_slice = np.s_[row_id * 50:min(self.data_vector_length, (row_id +1) * 50)]
+			x = np.arange(vector_slice.start, vector_slice.stop)
+		
+			# ax.set_title(f'{self.training_set["name"]} after LOOCV')
+			ax.set_ylabel('Error in $\sigma_\mathrm{SLICS}$')
+			
+			ax.plot(x, avg_mse[vector_slice] / self.compressor.avg_slics_data_vector_err[vector_slice], label='Average error', color='red', linewidth=3)
+
+			ax.plot(x, np.array(all_mse / self.compressor.avg_slics_data_vector_err).T[vector_slice], color='blue', alpha=.2, linewidth=1)
+
+			# Dummy LOO realisation for legend
+			ax.plot(np.nan, color='blue', alpha=.2, linewidth=1, label='Single LOO realisation')
+			
+			# Add covariance matrix shaded area
+			if self.compressor is not None and plot_cov:
+				cov = np.ones(self.data_vector_length)
+				ax.fill_between(x=x, y1=-cov[vector_slice], y2=cov[vector_slice], color='grey', alpha=.4, label='$1\sigma$ covariance')
+
+			if row_id == 0:
+				ax.legend()
+	
 		ax.set_xlabel('Data vector entry')
-		ax.set_ylabel('Fractional error')
-		
-		ax.plot(avg_mse, label='Average fractional error', color='red', linewidth=3)
 
-		ax.plot(np.array(all_mse).T, color='blue', alpha=.2, linewidth=1)
-
-		# Dummy LOO realisation for legend
-		ax.plot(np.nan, color='blue', alpha=.2, linewidth=1, label='Single LOO realisation')
-		
-		# Add covariance matrix shaded area
-		if self.compressor is not None and plot_cov:
-			cov = np.sqrt(np.diag(self.compressor.slics_covariance_matrix)) / np.average(self.compressor.slics_training_set['target'], axis=0)
-			ax.fill_between(x=np.arange(0,len(cov)), y1=-cov, y2=cov, color='grey', alpha=.4, label='$1\sigma$ covariance')
-
-		ax.legend()
-
-		fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_loocv.png')
+		self._save_plot(fig, 'loocv')
 		return fig, ax
 	
 	def plot_predictions_over_parameters(self, preds_count=10, colormap='viridis', save=True):
@@ -101,10 +120,11 @@ class Emulator:
 		]
 
 		index_names = ['Omega_M', 'S_8', 'h', 'w_0']
+		lbls = ['$\Omega_M$', '$S_8$', '$h$', '$w_0$']
 
 		index_range = index_ranges[index]
 
-		fig, ax = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, true_value=False)
+		fig, axs = self.compressor.plot_data_vectors(include_slics=True, include_cosmoslics=False, save=False, true_value=False)
 
 		param_values = np.linspace(*index_range, index_preds)
 
@@ -117,20 +137,31 @@ class Emulator:
 		# Add the predictions to the plot
 		cmap = mpl.colormaps[colormap]
 		norm = mpl.colors.Normalize(vmin=index_range[0], vmax=index_range[1])
-
 		# ScalarMappable for colorbar
 		sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 		sm.set_array([])
-		cbar = fig.colorbar(sm, ax=ax)
-		cbar.set_label(index_names[index])
+
+		nrows = fig.axes[0].get_subplotspec().get_topmost_subplotspec().get_gridspec().nrows
+
+		
+		cbar = fig.colorbar(sm, ax=axs if nrows == 1 else axs[-1])
+		cbar.set_label(lbls[index])
 		cbar.ax.axhline(self.compressor.slics_training_set['input'][0][index], color='black', linestyle='dotted')
 
-		for i, pred in enumerate(predictions):
-			ax.plot(pred / self.compressor.avg_cosmoslics_data_vector - 1., c=cmap(norm(param_values[i])))
+		for row_id in range(nrows):
+			if nrows == 1:
+				ax = axs
+			else:
+				ax = axs[row_id]
+
+			vector_slice = np.s_[row_id * 50:min(self.data_vector_length, (row_id +1) * 50)]
+			x = np.arange(vector_slice.start, vector_slice.stop)
+
+			for i, pred in enumerate(predictions):
+				ax.plot(x, ((pred - self.compressor.avg_slics_data_vector) / self.compressor.avg_slics_data_vector_err)[vector_slice], c=cmap(norm(param_values[i])))
 
 		if save:
-			fig.savefig(f'{self.plots_dir}/{type(self.compressor).__name__}_{type(self.regressor).__name__}_predictionss_over_{index_names[index]}.png')
-			plt.close(fig)
+			self._save_plot(fig, f'predictionss_over_{index_names[index]}')
 
 	def plot_predictions_over_s8(self, s8_count=10, colormap='viridis', save=True):
 		self.plot_predictions_over_input_index(1, s8_count, colormap, save)
@@ -234,5 +265,5 @@ class PerFeatureEmulator(Emulator):
 
 class PerFeatureGPREmulator(PerFeatureEmulator):
 
-	def __init__(self, compressor: Compressor):
-		super().__init__(GaussianProcessRegressor, compressor=compressor, normalize_y=True)
+	def __init__(self, compressor: Compressor, **regressor_kwargs):
+		super().__init__(GaussianProcessRegressor, compressor=compressor, normalize_y=True, **regressor_kwargs)

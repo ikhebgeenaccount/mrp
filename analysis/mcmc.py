@@ -20,7 +20,7 @@ class MCMC:
 		# print('cor mat det=', np.linalg.det(self.emulator.compressor.slics_crosscorr_matrix))
 		print('Covariance matrix inversion')
 		self.inv_cov_matrix = np.linalg.inv(covariance_matrix)
-		print(self.inv_cov_matrix)
+		# print(self.inv_cov_matrix)
 		
 		# self.cov_matrix_det = np.linalg.det(covariance_matrix)
 		# self.cov_det_inv_sqrt = 1. / np.sqrt(self.cov_matrix_det)
