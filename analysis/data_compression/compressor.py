@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
@@ -7,6 +8,7 @@ from scipy.optimize import lsq_linear
 
 from analysis.cosmology_data import CosmologyData
 from analysis.persistence_diagram import PersistenceDiagram
+from utils.file_system import check_folder_exists
 
 
 class Compressor:
@@ -18,11 +20,21 @@ class Compressor:
 		self.cosmoslics_datas = cosmoslics_datas
 		self.slics_data = slics_data
 
-		self.zbins = self.slics_data[0].zbins
+		self.zbins = slics_data[0].zbins
+		pat = re.compile('([0-9.]+)')
+		self.zbins_labels = []
+		for zbin in self.zbins:
+			det = pat.findall(zbin)
+			
+			lbl = ''
+			if len(det) == 2:
+				lbl = '{0} < $z$ < {1}'.format(*det)
+			else:
+				lbl = '{0} < $z$ < {1} X {2} < $z$ < {3}'.format(*det)
+			
+			self.zbins_labels.append(lbl)
 
 		self.plots_dir = 'plots'
-
-		self.compress()
 
 	def compress(self):
 		self.cosmoslics_training_set = self._build_training_set(self.cosmoslics_datas)
@@ -60,7 +72,7 @@ class Compressor:
 			self.slics_covariance_matrix = np.array([[np.var(self.slics_training_set['target'].T)]])
 		else:
 			self.slics_covariance_matrix = np.cov(self.slics_training_set['target'].T)
-		self.slics_covariance_matrix = self.slics_covariance_matrix / self.cosmoslics_datas[0].zbins_pds[self.zbins[0]][0].maps_count
+		# self.slics_covariance_matrix = self.slics_covariance_matrix / len(self.cosmoslics_datas[0].zbins_pds[self.zbins[0]])
 
 	def _calculate_average_data_vector(self):
 		if self.data_vector_length == 1:
@@ -139,7 +151,9 @@ class Compressor:
 		return fig, ax
 	
 	def _save_plot(self, fig, save_name):
-		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.png')
+		check_folder_exists(self.plots_dir)
+		fig.tight_layout()
+		fig.savefig(f'{self.plots_dir}/{type(self).__name__}_{save_name}.pdf')
 		plt.close(fig)
 
 	def plot_covariance_matrix(self, save=True):
@@ -150,59 +164,77 @@ class Compressor:
 		self._build_crosscorr_matrix()
 		self._plot_matrix(self.slics_crosscorr_matrix, title='SLICS correlation matrix', save_name='slics_corr_matrix', save=save)
 
-	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, true_value=False, logy=False):
-		fig, ax = plt.subplots()
-
+	def plot_data_vectors(self, include_slics=False, include_cosmoslics=True, save=True, true_value=False, logy=False, entries_per_row=50):
 		if true_value:
 			cosmoslics_plot = self.cosmoslics_training_set['target']
 			slics_plot = self.avg_slics_data_vector
 			slics_err_plot = self.avg_slics_data_vector_err
 		else:
 			# Normalize by dividing by average of cosmoSLICS data vectors
-			cosmoslics_plot = self.cosmoslics_training_set['target'] / self.avg_cosmoslics_data_vector - 1
-			slics_plot = self.avg_slics_data_vector / self.avg_cosmoslics_data_vector - 1
-			slics_err_plot = self.avg_slics_data_vector_err / self.avg_cosmoslics_data_vector
+			cosmoslics_plot = (self.cosmoslics_training_set['target'] - self.avg_slics_data_vector) / (self.avg_slics_data_vector_err)
+			slics_plot = np.zeros(self.data_vector_length)
+			slics_err_plot = np.ones(self.data_vector_length)
 
 		if logy:
 			cosmoslics_plot = np.abs(cosmoslics_plot)
 			slics_plot = np.abs(slics_plot)
 			slics_err_plot = np.abs(slics_err_plot)
 
-		if include_cosmoslics:
-			ax.plot(cosmoslics_plot.T, color='blue', alpha=.4, linewidth=1)
-			# Empty plot for legend
-			ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
-
-		if include_slics:
-			ax.plot(slics_plot, color='red', linewidth=3, alpha=.6, label='SLICS')
-
-			ax.fill_between(
-				np.linspace(0, self.data_vector_length - 1, num=self.data_vector_length),
-				y1=slics_plot + slics_err_plot,
-				y2=slics_plot - slics_err_plot,
-				color='grey', alpha=.4, label='$1\sigma$ SLICS covariance'
-			)
-
-		if logy:
-			ax.semilogy()
-
-		ax.legend()
-		if true_value:
-			ax.set_title('Data vectors')
-			y_label = 'Entry value'
+		if self.data_vector_length > entries_per_row:
+			nrows = int(np.ceil(self.data_vector_length / 50))
 		else:
-			ax.set_title('Data vectors normalized with cosmoSLICS average')
-			y_label = '(Entry value / cosmoSLICS avg) - 1'
+			nrows = 1
 
-		if logy:
-			y_label = f'|{y_label}|'
-		ax.set_xlabel('Data vector entry')
-		ax.set_ylabel(y_label)
+		# Width is increased with longer data vector
+		fig, axs = plt.subplots(nrows=nrows, figsize=(max(6.4, 6.4 / 35 * self.data_vector_length / nrows), 3 * nrows), sharey=True)
+
+		for row_id in range(nrows):
+			if nrows == 1:
+				ax = axs
+			else:
+				ax = axs[row_id]
+
+			vector_slice = np.s_[row_id * 50:min(self.data_vector_length, (row_id +1) * 50)]
+			x = np.arange(vector_slice.start, vector_slice.stop)
+
+			if include_cosmoslics:
+				ax.plot(x, cosmoslics_plot.T[vector_slice], color='blue', alpha=.4, linewidth=1)
+				# Empty plot for legend
+				ax.plot(np.nan, color='blue', alpha=.4, linewidth=1, label='cosmoSLICS')
+
+			if include_slics:
+				ax.plot(x, slics_plot[vector_slice], color='red', linewidth=3, alpha=.6, label='SLICS')
+
+				ax.fill_between(
+					x,
+					y1=slics_plot[vector_slice] + slics_err_plot[vector_slice],
+					y2=slics_plot[vector_slice] - slics_err_plot[vector_slice],
+					color='grey', alpha=.4, label='$1\sigma$ SLICS covariance'
+				)
+
+			if logy:
+				ax.semilogy()
+
+			if true_value:
+				# ax.set_title('Data vectors')
+				y_label = 'Entry value'
+			else:
+				# ax.set_title('Data vectors normalized with cosmoSLICS average')
+				y_label = '(cosmoSLICS - SLICS) / $\sigma_\mathrm{SLICS}$'
+
+			if logy:
+				y_label = f'|{y_label}|'
+		
+			ax.set_ylabel(y_label)
+
+		ax.set_xlabel('Data vector entry')	
+		ax.legend()				
 
 		if save:
+			fig.tight_layout()
 			self._save_plot(fig, f'data_vector{"" if not true_value else "_abs"}{"" if not logy else "_logy"}')
 
-		return fig, ax
+		return fig, axs
 	
 	def plot_fisher_matrix(self, save=True):
 		fig, ax = self._plot_matrix(self.fisher_matrix, title='Fisher information matrix')

@@ -16,3 +16,6 @@ class Criterium:
 	
 	def pixel_scores_per_zbin(self):
 		raise NotImplementedError(f'Subclasses of {type(self).__name__} must implement at least one of pixel_scores and pixel_scores_per_zbin')
+	
+	def plot(self):
+		pass

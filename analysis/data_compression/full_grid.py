@@ -35,13 +35,13 @@ class FullGrid(IndexCompressor):
 	
 	def _build_covariance_matrix(self):
 		# Building a covariance matrix for FullGrid is not possible, as it has 16(zbins) x 20000(bngs) = 320k data points
-		self.slics_covariance_matrix = None  # Set it to None so an error is thrown when it is used
+		self.slics_covariance_matrix = np.array([[1.]])  # Set it to None so an error is thrown when it is used
 
-	def _calculate_average_data_vector(self):
-		if self.data_vector_length == 1:
-			self.avg_slics_data_vector = np.array([np.average(self.slics_training_set['target'])])
-			self.avg_cosmoslics_data_vector = np.array([np.average(self.cosmoslics_training_set['target'])])
-		else:
-			self.avg_slics_data_vector = np.average(self.slics_training_set['target'], axis=0)
-			self.avg_cosmoslics_data_vector = np.average(self.cosmoslics_training_set['target'], axis=0)
-		self.avg_slics_data_vector_err = np.std(self.slics_training_set['target'], axis=0)
+	# def _calculate_average_data_vector(self):
+	# 	if self.data_vector_length == 1:
+	# 		self.avg_slics_data_vector = np.array([np.average(self.slics_training_set['target'])])
+	# 		self.avg_cosmoslics_data_vector = np.array([np.average(self.cosmoslics_training_set['target'])])
+	# 	else:
+	# 		self.avg_slics_data_vector = np.average(self.slics_training_set['target'], axis=0)
+	# 		self.avg_cosmoslics_data_vector = np.average(self.cosmoslics_training_set['target'], axis=0)
+	# 	self.avg_slics_data_vector_err = np.std(self.slics_training_set['target'], axis=0)

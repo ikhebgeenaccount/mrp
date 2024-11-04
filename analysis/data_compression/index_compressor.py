@@ -1,3 +1,6 @@
+from matplotlib import pyplot as plt
+
+import matplotlib as mpl
 from analysis.cosmology_data import CosmologyData
 from analysis.data_compression.compressor import Compressor
 from analysis.persistence_diagram import BaseRangedMap, BettiNumbersGrid, PersistenceDiagram
@@ -87,7 +90,7 @@ class IndexCompressor(Compressor):
 
 		return training_set
 
-	def visualize(self, save=True):
+	def visualize(self, save=True, moments=[1, 2, 3, 4]):
 		r = [-.05, .05]
 		for iz, zbin in enumerate(self.zbins):
 			for dim in [0, 1]:
@@ -95,9 +98,9 @@ class IndexCompressor(Compressor):
 				x_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 3]
 				y_ind_dim = self.indices[(self.indices[:, 0] == iz) * (self.indices[:, 1] == dim)][:, 2]
 
-				for mom in [1, 2, 3, 4]:
+				for mom in moments:
 					avg_bng_cosmoslics_dim = BettiNumbersGrid(
-						moment([csd.zbins_bngs_avg[zbin][dim] for csd in self.cosmoslics_datas], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
+						moment([csd.zbins_bngs_avg[zbin][dim]._transform_map() for csd in self.cosmoslics_datas], moment=mom, axis=0, nan_policy='omit', center=0 if mom == 1 else None),
 						birth_range=r,
 						death_range=r,
 						dimension=dim
@@ -106,10 +109,71 @@ class IndexCompressor(Compressor):
 					fig, ax = avg_bng_cosmoslics_dim.plot(scatter_points=[x_ind_dim, y_ind_dim],
 									scatters_are_index=True)
 					# self._add_data_vector_labels(ax, dim)
-					ax.set_title(f'{zbin}, dim={dim}, moment={mom}')
+					# ax.set_title(f'{zbin}, dim={dim}, moment={mom}')
 
 					if save:
 						self._save_plot(fig, f'visualize_{zbin}_dim{dim}_mom{mom}')
+
+		self.plot_entries_per_zbin(save=save)
+
+	def plot_entries_per_zbin(self, save=True, ax=None, **hist_args):
+		# Plot entires per zbin		
+		if ax is None:
+			fig, ax = plt.subplots(figsize=(6.4, 6))
+		else:
+			fig = None
+		bins = [-.5 + 1. * i for i in range(len(self.zbins) + 1)]
+		ax.hist(self.indices.T[0], bins=bins, **hist_args)
+		ax.set_xticks(ticks=range(len(self.zbins)), labels=self.zbins_labels, rotation='vertical')
+		ax.set_ylabel('Entry count')
+		if save:
+			fig.tight_layout()
+			self._save_plot(fig, 'visualize_entries_zbins')
+			return
+		return fig, ax
+
+	def plot_locations_in_one(self, colormap='tab20', save=True):
+		cmap = mpl.colormaps[colormap]
+		# Scale colormap to number of redshift bins
+		norm = mpl.colors.Normalize(vmin=0, vmax=20)
+		# ScalarMappable for colorbar
+		sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+		sm.set_array([])
+
+		for dim in [0, 1]:
+			fig, ax = plt.subplots()
+			for iz, zbin in enumerate(self.zbins):
+				# Select the correct indices
+				sel = np.broadcast_to((self.indices_t[0] == iz) * (self.indices_t[1] == dim), shape=(4, self.data_vector_length))
+				count = int(np.sum(sel) / 4)
+				ind = self.indices_t[sel]
+				ind = np.reshape(ind, (4, count))
+
+				if count == 0:
+					ax.scatter(x=np.nan, y=np.nan, label=self.zbins_labels[iz], c=[sm.to_rgba(iz)])
+					continue
+
+				# cax = ax.scatter(x=self.indices_t[3], y=np.abs(self.indices_t[2] - 100), c=self.indices_t[0], cmap='viridis')
+
+				ax.scatter(x=ind[3], y=np.abs(ind[2] - 100), label=self.zbins_labels[iz], c=[sm.to_rgba(iz)])
+
+				ax.set_xticks(ticks=np.arange(0, 101, 20), labels=[f'{l:.2f}' for l in np.arange(-.05, .06, .02)])
+				ax.set_yticks(ticks=np.arange(0, 101, 20), labels=[f'{l:.2f}' for l in np.arange(-.05, .06, .02)])
+
+			# cbar = fig.colorbar(sm, ax=ax)
+			# cbar.set_label('$z$ bin index')
+
+			# ax.legend()
+
+			ax.set_xlabel('Birth threshold $\kappa$')
+			ax.set_ylabel('Death threshold $\kappa$')
+
+			figleg = plt.figure(figsize=(2.7, 3.6))
+			figleg.legend(ax.get_legend_handles_labels()[0], ax.get_legend_handles_labels()[1])
+		
+			if save:
+				self._save_plot(figleg, f'visualize_indices_in_one_legend_dim{dim}')
+				self._save_plot(fig, f'visualize_indices_in_one_dim{dim}')
 
 	def _add_data_vector_labels(self, ax, dim):
 		if dim == 0:

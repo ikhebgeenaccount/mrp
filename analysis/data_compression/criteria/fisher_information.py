@@ -1,5 +1,6 @@
 
 
+from matplotlib import pyplot as plt
 import numpy as np
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.criteria.criterium import Criterium
@@ -27,11 +28,23 @@ class FisherInformation(Criterium):
 		return False
 
 	def criterium_value(self, compressor: Compressor):
-		return compressor.fisher_matrix[1, 1]
+		return np.linalg.det(compressor.fisher_matrix)
 
 	def pixel_scores(self):
 		full_grid = FullGrid(self.cosmoslics_datas, self.slics_data)
+		full_grid.compress()
 
-		# Sort full_grid by fisher info
+		mat_per_entry = full_grid.fisher_matrix_per_entry
+		move_ax = np.moveaxis(mat_per_entry, -1, 0)
+		dets = np.linalg.det(move_ax)
+
 		# Minus to make argsort descending order
-		return np.reshape(np.max(-full_grid.fisher_matrix_per_entry, axis=(0, 1)), (len(self.slics_data[0].zbins_pds), 2, 100, 100))
+		return np.reshape(dets, (len(self.slics_data[0].zbins_pds), 2, 100, 100))
+	
+	def plot(self):
+		fig, ax = plt.subplots()
+		ax.set_ylabel('Fisher info value')
+		ax.set_xlabel('Data vector entry')
+		ax.plot(self.fisher_info_vals)
+		ax.semilogy()
+		return fig

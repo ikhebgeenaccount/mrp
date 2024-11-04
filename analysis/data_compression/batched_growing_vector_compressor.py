@@ -19,7 +19,7 @@ class BatchedGrowingVectorCompressor(GrowingVectorCompressor):
 
 	def __init__(
 		self, cosmoslics_datas: List[CosmologyData], slics_data: List[CosmologyData], criterium: Criterium,
-		max_data_vector_length: int, minimum_feature_count: float=0, minimum_crosscorr_det: float=1e-5,
+		max_data_vector_length: int, minimum_feature_count: float=0, correlation_determinant_criterium: Criterium=None,
 		batch_size=100, add_feature_count=False, verbose=False
 	):
 		self.batch_size = batch_size
@@ -29,7 +29,7 @@ class BatchedGrowingVectorCompressor(GrowingVectorCompressor):
 			criterium=criterium,
 			max_data_vector_length=max_data_vector_length,
 			minimum_feature_count=minimum_feature_count,
-			minimum_crosscorr_det=minimum_crosscorr_det,
+			correlation_determinant_criterium=correlation_determinant_criterium,
 			add_feature_count=add_feature_count,
 			verbose=verbose
 		)
@@ -46,9 +46,14 @@ class BatchedGrowingVectorCompressor(GrowingVectorCompressor):
 			# Create Compressors for batch_size indices from curr_index
 			compare_values = []
 			for j in range(self.batch_size):
+				# Check if we are out of bounds of test_indices array
+				# if curr_index + j >= len(self.test_indices):
+				# 	break
+
 				# Get the jth index out from curr_index
-				curr_unrav = np.unravel_index(self.test_indices[curr_index + j], self.pixel_scores_shape)
+				curr_unrav = np.unravel_index(self.pixel_scores_argsort[curr_index + j], self.pixel_scores_shape)
 				temp_comp = IndexCompressor(self.cosmoslics_datas, self.slics_data, indices=self.map_indices + [curr_unrav])
+				temp_comp.compress()
 
 				# Check that correlation determinant is > minimum_crosscorr_det
 				if not self._test_corr_det(temp_comp):
@@ -63,10 +68,13 @@ class BatchedGrowingVectorCompressor(GrowingVectorCompressor):
 			# Find the index corresponding to the highest value
 			best_index = np.argmax(compare_values)
 
-			self._accept_index(curr_index + best_index, np.unravel_index(self.test_indices[curr_index + best_index], self.pixel_scores_shape))
+			self._accept_index(curr_index + best_index, np.unravel_index(self.pixel_scores_argsort[curr_index + best_index], self.pixel_scores_shape))
 
 			curr_index = self._set_new_start(curr_index, best_index)
+
+		self._print_result()
+		return self._finalize_build(cosm_datas)
 			
 	def _set_new_start(self, curr_index, best_index):
 		# Next batch will be calculated from the index following best_index
-		return curr_index + best_index + 1
+		return curr_index + 250

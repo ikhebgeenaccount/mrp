@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import numpy as np
 from analysis.data_compression.compressor import Compressor
 from analysis.data_compression.criteria.criterium import Criterium
@@ -37,4 +38,11 @@ class ChiSquared(Criterium):
 		for zbin in self.slics_data[0].zbins:
 			dp_merge.append([self.dist_powers[zbin][0]._transform_map(), self.dist_powers[zbin][1]._transform_map()])
 		return np.array(dp_merge)
+	
+	def plot(self):		
+		fig, ax = plt.subplots()
+		ax.set_ylabel('$\chi^2$')
+		ax.set_xlabel('Data vector entry')
+		ax.plot(self.chisq_values)
+		return fig
 	
