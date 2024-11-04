@@ -31,8 +31,14 @@ class CosmologyData:
 				zbin: [pd.dimension_pairs_count for pd in self.zbins_pds[zbin]] 
 				for zbin in self.zbins_pds
 			}
-
-		self.zbins = list(zbins_pds.keys())
+		
+		# Sort alphabetically
+		sorted = np.sort(list(zbins_pds.keys()))
+		# Sort by length of name to ensure crossbins at the end
+		sorted = sorted[np.argsort([len(zb) for zb in sorted])]
+		# Put widest bin in front
+		sorted[0], sorted[1] = sorted[1], sorted[0]
+		self.zbins = sorted
 
 		self.products_dir = products_dir
 		self.products_loc = os.path.join(products_dir, cosmology)
@@ -62,9 +68,9 @@ class CosmologyData:
 			for dim in [0, 1]:
 				self.zbins_bngs_std[zbin].append(BettiNumbersGridVarianceMap(self.zbins_bngs[zbin][dim]))
 
-				# SLICS variance goes down as 1/sqrt(n_los_cosmoslics) (basically, number of measurements)
-				if self.cosmology == 'SLICS':
-					self.zbins_bngs_std[zbin][dim].map = self.zbins_bngs_std[zbin][dim].map / np.sqrt(self.n_cosmoslics_los)
+				# # SLICS variance goes down as 1/sqrt(n_los_cosmoslics) (basically, number of measurements)
+				# if self.cosmology == 'SLICS':
+				# 	self.zbins_bngs_std[zbin][dim].map = self.zbins_bngs_std[zbin][dim].map / np.sqrt(self.n_cosmoslics_los)
 
 		# Calculate average dimension pairs counts in each zbin
 		self.dimension_pairs_count_avg = {
